@@ -145,6 +145,7 @@ class PDE:
 
         for arg in args:
             arg.to_formula(self.indvar)
+            # arg.formula=u(x,y)
             self.bc[name].append(arg)
 
     def add_bc(self, name, *args):
@@ -227,28 +228,37 @@ class PDE:
         pde_disc.geometry = geo_disc
 
         # bc
+        # 把每一个边值条件约束，在自变量上进行离散化
         for name, bc in self.bc.items():
             pde_disc.bc[name] = list()
             for i in range(len(bc)):
                 bc_disc = bc[i].discretize(pde_disc.indvar)
+                # 放入离散化后的边值条件约束
                 pde_disc.bc[name].append(bc_disc)
 
-        # discritize r hs in equation for interior points
+        # discritize rhs in equation for interior points
+        # 在内部点上对pde进行离散化
         pde_disc.rhs_disc = dict()
         pde_disc.rhs_disc["interior"] = list()
         for rhs in pde_disc.rhs:
+            # (9801, 2)
             points_i = pde_disc.geometry.interior
 
+            # 相当于 split(axis=1) 的操作，将x和y分开为两组，方便后续作为参数传入其他函数
             data = list()
             for n in range(len(points_i[0])):
                 data.append(points_i[:, n])
 
+            # 设定约束条件在每个内部点上的取值
             if type(rhs) == types.LambdaType:
+                # 所有约束条件在内部点上的值是与点位有关的函数
                 pde_disc.rhs_disc["interior"].append(rhs(*data))
             else:
+                # 所有约束条件在内部点上的值是一恒为rhs的数
                 pde_disc.rhs_disc["interior"].append(rhs)
 
         # discritize rhs in equation for user points
+        # laplace2d没有user points
         if pde_disc.geometry.user is not None:
             pde_disc.rhs_disc["user"] = list()
             for rhs in pde_disc.rhs:
@@ -264,6 +274,7 @@ class PDE:
                     pde_disc.rhs_disc["user"].append(rhs)
 
         # discretize weight in equations
+        # [Derivative(u(x, y), (x, 2)) + Derivative(u(x, y), (y, 2))]
         weight = pde_disc.weight
         if (weight is None) or np.isscalar(weight):
             pde_disc.weight_disc = [weight for _ in range(len(self.equations))]
@@ -273,7 +284,9 @@ class PDE:
 
         # discritize weight and rhs in boundary condition
         for name_b, bc in pde_disc.bc.items():
+            # [2x(h+w)-4, 1]
             points_b = pde_disc.geometry.boundary[name_b]
+            # None
             normal_b = pde_disc.geometry.normal[name_b]
 
             data = list()

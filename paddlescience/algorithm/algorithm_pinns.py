@@ -46,6 +46,7 @@ class PINNs(AlgorithmBase):
         self.loss = loss
 
     def create_inputs(self, pde):
+        """构造输入数据"""
         if type(self.loss) is FormulaLoss:
             inputs, inputs_attr = self.create_inputs_from_loss(pde)
         else:
@@ -57,6 +58,7 @@ class PINNs(AlgorithmBase):
         return inputs, inputs_attr
 
     def create_labels(self, pde, interior_shape=None, supervised_shape=None):
+        """构造标签数据"""
         if type(self.loss) is FormulaLoss:
             labels, labels_attr = self.create_labels_from_loss(pde)
         else:
@@ -78,17 +80,22 @@ class PINNs(AlgorithmBase):
 
         # interior: inputs_attr["interior"]["0"]
         inputs_attr_i = OrderedDict()
+        # (9801, 2)
         points = pde.geometry.interior
         if pde.time_dependent == True and pde.time_disc_method is None:
             # time dependent equation with continue method
             data = self.__timespace(pde.time_array[1::], points)
         else:
             data = points
+        # 离散化后的内部点，放入输入数据集合中
         inputs.append(data)
+
+        # 同时记录内部点的属性，包括在整个数据中的起始下标
         inputs_attr_i["0"] = InputsAttr(0, 0)
         inputs_attr["interior"] = inputs_attr_i
 
         # boundary: inputs_attr["boundary"][name]
+        # 同理，拿到边界区域数据的属性，包括在整个数据中的起始下标，边界可以有多个所以需要for循环
         inputs_attr_b = OrderedDict()
         for name in pde.bc.keys():
             points = pde.geometry.boundary[name]
@@ -103,6 +110,7 @@ class PINNs(AlgorithmBase):
 
         # initial condition for time-dependent
         # inputs_attr["ic"]["0"]
+        # 同理，拿到初值区域输入数据的属性，包括在整个数据中的起始下标
         if pde.time_dependent == True and pde.time_disc_method is None:
             inputs_attr_it = OrderedDict()
             points = pde.geometry.interior
@@ -114,6 +122,7 @@ class PINNs(AlgorithmBase):
             inputs_attr["ic"] = OrderedDict()
 
         # data: inputs_attr["user"]["0"]
+        # 同理，初始化用户点区域输入数据的属性，包括在整个数据中的起始下标
         inputs_attr_d = OrderedDict()
         points = pde.geometry.user
         if points is not None:
@@ -127,6 +136,7 @@ class PINNs(AlgorithmBase):
         inputs_attr["user"] = inputs_attr_d
 
         # padding
+        # 分布式训练，要对每一部分的数据点进行padding，以便后续的合理切分
         nprocs = paddle.distributed.get_world_size()
         for i in range(len(inputs)):
             inputs[i] = self.__padding_array(nprocs, inputs[i])
@@ -153,6 +163,7 @@ class PINNs(AlgorithmBase):
             attr = dict()
 
             # rhs
+            # 0.0
             rhs = pde.rhs_disc["interior"][i]
             if (rhs is None) or np.isscalar(rhs):
                 attr["rhs"] = rhs
@@ -172,6 +183,7 @@ class PINNs(AlgorithmBase):
                 attr["weight"] = LabelInt(len(labels))
                 labels.append(weight)
 
+            # 记录内部点对应的等式，它的权重和等式右侧的值，作为其属性
             labels_attr["interior"]["equations"].append(attr)
 
         # interior data_cur: soluiton of current time step on interior points (time-discretized)
@@ -191,8 +203,10 @@ class PINNs(AlgorithmBase):
         #   - labels_attr["bc"][name_b][i]["normal"]
         labels_attr["bc"] = OrderedDict()
         for name_b, bc in pde.bc.items():
+            # bc是一个list，里面存放了name_b对应的边界约束条件
             labels_attr["bc"][name_b] = list()
             for b in bc:
+                # 遍历每一个name_b边界上的约束条件
                 attr = dict()
                 rhs = b.rhs_disc
                 weight = b.weight_disc
@@ -584,6 +598,7 @@ class PINNs(AlgorithmBase):
                 bs=-1,
                 params=params)  # TODO: bs is not used
             loss_eq += loss_i
+            # print(f"loss_i = {loss_i.item():.10f}")
             outs.append(out_i)
             n += 1
 
@@ -603,6 +618,7 @@ class PINNs(AlgorithmBase):
                 labels_attr,
                 bs=-1,
                 params=params)  # TODO: bs is not used
+            # print(f"loss_b = {loss_b.item():.10f}")
             loss_bc += loss_b
             outs.append(out_b)
             n += 1
@@ -620,6 +636,7 @@ class PINNs(AlgorithmBase):
                 bs=-1,
                 params=params)
             loss_ic += loss_it
+            # print(f"loss_it = {loss_it.item():.10f}")
             outs.append(out_it)
             n += 1
 
@@ -651,6 +668,7 @@ class PINNs(AlgorithmBase):
                 labels_attr["user"],
                 bs=-1,
                 params=params)  # TODO: bs is not used
+            # print(f"loss_d = {loss_d.item():.10f}")
             loss_data += loss_d
             outs.append(out_id)
 
@@ -703,10 +721,12 @@ class PINNs(AlgorithmBase):
 
     def __padding_array(self, nprocs, array):
         npad = (nprocs - len(array) % nprocs) % nprocs  # pad npad elements
+        # 补上一部分数据让整体数据可以被nprocs均分
         if array.ndim == 2:
-            datapad = array[-1, :].reshape((-1, array[-1, :].shape[0]))
+            datapad = array[-1, :].reshape((-1, array[-1, :].shape[0])) # [1, dim]
             for i in range(npad):
                 array = np.append(array, datapad, axis=0)
+        # array变成[b0+npad, dim]
         elif array.ndim == 1:
             datapad = array[-1]
             for i in range(npad):

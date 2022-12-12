@@ -139,6 +139,7 @@ class Geometry:
         data = list()
         for n in range(self.ndims):
             data.append(points[:, n])
+        # data = [(npoints,) , (npoints, ) ]把x和y分开，方便作为lambda的输入x、y
 
         # init as True
         flag_i = np.full(npoints, True, dtype='bool')
@@ -147,6 +148,7 @@ class Geometry:
         for name in self.criteria.keys():
 
             # flag bounday points
+            # [npoints,]，在边界上的点的数据点为True
             flag_b = self.criteria[name](*data)
 
             # extract
@@ -154,6 +156,7 @@ class Geometry:
             geo_disc.boundary[name] = points[flag_ib, :]
 
             # set extracted points as False
+            # 保证boundary之间没有点集交集
             flag_i[flag_ib] = False
 
             # TODO: normal
@@ -178,12 +181,14 @@ class Geometry:
             # TODO: normal
 
         # extract remain points, i.e. interior points
+        # 除边界外剩下的点就是内部点
         geo_disc.interior = points[flag_i, :]
 
         # TODO: Note that the currently generated points are inaccurate 
         # and will be fixed in the future
 
         # padding
+        # 多卡环境下，对不同意义的点集分别进行必要的padding以满足sharding要求
         if padding:
             nproc = paddle.distributed.get_world_size()
             geo_disc.padding(nproc)

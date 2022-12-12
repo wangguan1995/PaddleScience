@@ -61,11 +61,15 @@ class L2:
                 labels_attr,
                 bs,
                 params=None):
+        # laplace2d在本函数中，没有用到labels
 
         cmploss = CompFormula(pde, net)
 
         # compute outs, jacobian, hessian
+        # 计算输入对应的输出、输入对输出的一阶微分矩阵，二阶微分矩阵，所以这里会进行3次前向
         cmploss.compute_outs_der(input, bs, params)
+        # 为啥这里Hessian[0,1]!=Hessian[1,0]，存在1e-7数量级上的误差
+        # 理论上all_close应该是相等的
 
         # print(input)
         # print(cmploss.outs[0:4,:])

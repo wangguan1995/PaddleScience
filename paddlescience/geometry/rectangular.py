@@ -76,7 +76,7 @@ class Rectangular(Geometry):
         """
 
         if method == "uniform":
-            points = self._uniform_mesh(npoints)
+            points = self._uniform_mesh(npoints) # [npoints, 2]
         elif method == "sampling":
             points = self._sampling_mesh(npoints)
         elif method == "quasi_halton":

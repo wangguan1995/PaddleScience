@@ -14,7 +14,9 @@
 
 import paddlescience as psci
 import numpy as np
+import random
 import paddle
+import paddle.distributed as dist
 
 cfg = psci.utils.parse_args()
 
@@ -36,11 +38,12 @@ if cfg is not None:
     checkpoint_path = cfg['Post-processing']['checkpoint_path']
 else:
     # Geometry
+    # 101**2
     npoints = 10201
     seed_num = 1
     sampler_method = 'uniform'
     # Network
-    epochs = 20000
+    epochs = 2
     num_layers = 5
     hidden_size = 20
     activation = 'tanh'
@@ -51,31 +54,48 @@ else:
     vtk_filename = 'output_laplace2d'
     checkpoint_path = 'checkpoints'
 
-paddle.seed(seed_num)
-np.random.seed(seed_num)
+# initialize parallel environment and set random seed
+if dist.get_world_size() > 1:
+    dist.init_parallel_env()
+    paddle.seed(seed_num + dist.get_rank())
+    np.random.seed(seed_num + dist.get_rank())
+    random.seed(seed_num + dist.get_rank())
+else:
+    paddle.seed(seed_num)
+    np.random.seed(seed_num)
+    random.seed(seed_num)
 
-# analytical solution 
+# analytical solution
+# 定义标准解
 ref_sol = lambda x, y: np.cos(x) * np.cosh(y)
 
 # set geometry and boundary
+# 定义求解的几何区域，包括描述区域的端点、空间维数，并初始化边界判定条件集合、法线判定条件集合
 geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+
+# 为这个几何区域添加边界判定条件
 geo.add_boundary(
     name="around",
     criteria=lambda x, y: (y == 1.0) | (y == 0.0) | (x == 0.0) | (x == 1.0))
 
 # discretize geometry
+# 针对几何区域，获得划分好的点集，包括内部点、边界点等
 geo_disc = geo.discretize(npoints=npoints, method=sampler_method)
 
 # Laplace
+# 用sympy描述方程，包括定义自变量，因变量，以及自变量与因变量之间的关系式（包括偏微分关系式）
 pde = psci.pde.Laplace(dim=2)
 
 # set bounday condition
+# 给u(x,y)定义边值条件
 bc_around = psci.bc.Dirichlet('u', rhs=ref_sol)
 
 # add bounday and boundary condition
+# 添加刚才定义的边值条件bc_around
 pde.add_bc("around", bc_around)
 
 # discretization pde
+# 针对pde，对rhs在内部点、边界点、初始点进行离散化；
 pde_disc = pde.discretize(geo_disc=geo_disc)
 
 # Network
@@ -111,6 +131,11 @@ psci.visu.save_npy(
 # TODO: solution array to dict: interior, bc
 cord = pde_disc.geometry.interior
 ref = ref_sol(cord[:, 0], cord[:, 1])
+# 计算内部点的mse^2
+for i in range(len(solution)):
+    solution[i] = psci.utils.gather_nprocs(paddle.to_tensor(solution[i])).numpy()
+    # print(solution[i].shape)
+# exit(0)
 mse2 = np.linalg.norm(solution[0][:, 0] - ref, ord=2)**2
 
 n = 1

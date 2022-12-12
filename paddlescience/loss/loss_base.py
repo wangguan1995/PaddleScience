@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import paddle
+import paddle.distributed as dist
 import sympy
 import numpy as np
 from ..inputs import InputsAttr
@@ -33,7 +34,10 @@ class CompFormula:
         self.hessian = None
 
     def compute_outs(self, input, bs, params=None):
-        self.outs = self.net.nn_func(input, params)
+        if dist.get_world_size() > 1:
+            self.outs = self.net.forward(input, params)
+        else:
+            self.outs = self.net.nn_func(input, params)
 
     def compute_outs_der(self, input, bs, params=None):
 
@@ -41,14 +45,22 @@ class CompFormula:
         self.compute_outs(input, bs, params)
 
         # jacobian
-        jacobian = Jacobian(self.net.nn_func, input, is_batched=True)
+        if dist.get_world_size() > 1:
+            jacobian = Jacobian(self.net.forward, input, is_batched=True)
+        else:
+            jacobian = Jacobian(self.net.nn_func, input, is_batched=True)
 
         # hessian
         hessian = list()
-        for i in range(self.net.num_outs):
+        num_outs = self.net._layers.num_outs if isinstance(self.net, paddle.DataParallel) else self.net.num_outs
+
+        for i in range(num_outs):
 
             def func(input):
-                return self.net.nn_func(input)[:, i:i + 1]
+                if dist.get_world_size() > 1:
+                    return self.net.forward(input)[:, i:i + 1]
+                else:
+                    return self.net.nn_func(input)[:, i:i + 1]
 
             hessian.append(Hessian(func, input, is_batched=True))
 

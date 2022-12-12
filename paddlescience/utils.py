@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import paddle
 import yaml
 import argparse
 from .config import enable_visualdl, enable_static, enable_prim
 
-__all__ = ['parse_args']
+__all__ = ['parse_args', 'gather_nprocs']
 
 
 class AttrDict(dict):
@@ -165,3 +166,18 @@ def parse_args():
         pass
 
     return cfg
+
+
+def gather_nprocs(tensor, axis=0):
+    """gather tensor from all GPUs and concatenate them along given axis
+
+    Args:
+        tensor (paddle.Tensor): tensor to be gathered from all GPUs
+        axis (int, optional): concat axis. Defaults to 0.
+
+    Returns:
+        paddle.Tensor: gathered Tensor
+    """
+    tensor_list = []
+    paddle.distributed.all_gather(tensor_list, tensor)
+    return paddle.concat(tensor_list, axis)
