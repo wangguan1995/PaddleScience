@@ -1,0 +1,14 @@
+numpy
+scipy
+sympy
+matplotlib
+vtk
+pyevtk
+pandas
+wget
+scipy==1.7.3
+visualdl
+pyvista
+pysdf
+symengine
+chaospy
