@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .geometry_discrete import GeometryDiscrete
-from .geometry import Geometry
-import numpy as np
 import math
-from scipy.stats import qmc
+
+import numpy as np
 from pysdf import SDF
+from scipy.stats import qmc
+
+from .geometry import Geometry
 
 __all__ = ['Rectangular', 'Cube', 'CircleInRectangular', 'CylinderInCube']
 
@@ -62,7 +63,7 @@ class Rectangular(Geometry):
 
         Parameters:
             method ("uniform" / "sampling" / "quasi_halton" / "quasi_sobol"/ "quasi_lhs"): Discretize rectangular using method "uniform", "sampling", "quasi_halton", "quasi_sobol" or "quasi_lhs".
-            npoints (integer / integer list): Number of points 
+            npoints (integer / integer list): Number of points
 
         Example:
             >>> import paddlescience as psci
@@ -134,7 +135,7 @@ class Rectangular(Geometry):
         return points[0:npoints, :]
 
     def _sampling_boundary(self, npoints):
-        steps = list()
+        steps = []
 
         if self.ndims == 1:
             steps.append(np.array(self.origin[0], dtype=self._dtype))
@@ -142,7 +143,7 @@ class Rectangular(Geometry):
         elif self.ndims == 2:
             # nx: number of points on x-axis
             # ny: number of points on y-axis
-            # nx * ny = npoints 
+            # nx * ny = npoints
             # nx / ny = lx / ly
             lx = self.extent[0] - self.origin[0]
             ly = self.extent[1] - self.origin[1]
@@ -181,7 +182,7 @@ class Rectangular(Geometry):
             # nx: number of points on x-axis
             # ny: number of points on y-axis
             # nz: number of points on z-axis
-            # nx * ny * nz = npoints 
+            # nx * ny * nz = npoints
             # nx / lx = ny / ly = nz / lz
             lx = self.extent[0] - self.origin[0]
             ly = self.extent[1] - self.origin[1]
@@ -337,7 +338,7 @@ class Rectangular(Geometry):
 
     def _sampling_mesh(self, npoints):
 
-        steps = list()
+        steps = []
 
         if self.ndims == 1:
             steps.append(
@@ -350,7 +351,7 @@ class Rectangular(Geometry):
 
             # nx: number of points on x-axis
             # ny: number of points on y-axis
-            # nx * ny = npoints 
+            # nx * ny = npoints
             # nx / ny = lx / ly
             lx = self.extent[0] - self.origin[0]
             ly = self.extent[1] - self.origin[1]
@@ -395,7 +396,7 @@ class Rectangular(Geometry):
             # nx: number of points on x-axis
             # ny: number of points on y-axis
             # nz: number of points on z-axis
-            # nx * ny * nz = npoints 
+            # nx * ny * nz = npoints
             # nx / lx = ny / ly = nz / lz
             lx = self.extent[0] - self.origin[0]
             ly = self.extent[1] - self.origin[1]
@@ -508,7 +509,7 @@ class Rectangular(Geometry):
 
         # return np.random.uniform(low=origin, high=extent, size=(n, self.ndims))
 
-        steps = list()
+        steps = []
         for i in range(self.ndims):
             if origin[i] == extent[i]:
                 steps.append(np.full(n, origin[i], dtype=self._dtype))
@@ -534,7 +535,7 @@ class Rectangular(Geometry):
             if self.ndims == 1:
                 nd = [npoints]
             elif self.ndims == 2:
-                # nx * ny = npoints 
+                # nx * ny = npoints
                 # nx / ny = lx / ly
                 lx = self.extent[0] - self.origin[0]
                 ly = self.extent[1] - self.origin[1]
@@ -542,7 +543,7 @@ class Rectangular(Geometry):
                 nx = float(npoints) / ny
                 nd = [int(nx), int(ny)]
             elif self.ndims == 3:
-                # nx * ny * nz = npoints 
+                # nx * ny * nz = npoints
                 # nx / lx = ny / ly = nz / lz
                 lx = self.extent[0] - self.origin[0]
                 ly = self.extent[1] - self.origin[1]
@@ -555,7 +556,7 @@ class Rectangular(Geometry):
         else:
             nd = npoints
 
-        steps = list()
+        steps = []
         for i in range(self.ndims):
             steps.append(
                 np.linspace(
@@ -718,7 +719,7 @@ class CylinderInCube(Rectangular):
             # nx: number of points on x-axis
             # ny: number of points on y-axis
             # nz: number of points on z-axis
-            # nx * ny * nz = npoints 
+            # nx * ny * nz = npoints
             # nx / lx = ny / ly = nz / lz
             lx = self.extent[0] - self.origin[0]
             ly = self.extent[1] - self.origin[1]
@@ -739,7 +740,7 @@ class CylinderInCube(Rectangular):
             # number of points in cube
             ncube = npoints
 
-        # number of points in circle     
+        # number of points in circle
         nc = int(2 * (nx + ny) * ratio_perimeter)
 
         if method == "sampling":

@@ -14,11 +14,8 @@
 
 import paddle
 import sympy
-import numpy as np
-from ..inputs import InputsAttr
-from .. import config
-
-from paddle.incubate.autograd import Jacobian, Hessian
+from paddle.incubate.autograd import Hessian
+from paddle.incubate.autograd import Jacobian
 
 
 class CompFormula:
@@ -44,7 +41,7 @@ class CompFormula:
         jacobian = Jacobian(self.net.nn_func, input, is_batched=True)
 
         # hessian
-        hessian = list()
+        hessian = []
         for i in range(self.net.num_outs):
 
             def func(input):
@@ -159,7 +156,7 @@ class CompFormula:
         hessian = self.hessian
 
         # translate sympy diff to f_idx and var_idx
-        # f_idx: dependent(function) index, this function is in which index of dependent variable list 
+        # f_idx: dependent(function) index, this function is in which index of dependent variable list
         # var_idx: variable index, this variable is in which index of independent variable list
 
         # dependent variable
@@ -187,7 +184,7 @@ class CompFormula:
 
         # parser hessian for order 2
         elif order == 2:
-            var_idx = list()
+            var_idx = []
             for it in item.args[1:]:
                 for i in range(it[1]):
                     idx = self.indvar.index(it[0])

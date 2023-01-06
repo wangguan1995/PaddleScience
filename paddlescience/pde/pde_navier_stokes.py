@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .. import config
-from .pde_base import PDE
-from ..parameter import Parameter, is_parameter
-
 import sympy
-import numpy as np
+
+from ..parameter import Parameter, is_parameter
+from .pde_base import PDE
 
 __all__ = ['NavierStokes']
 
@@ -52,7 +50,7 @@ class NavierStokes(PDE):
         rho (float): density.
         dim (integer): dquation's dimention. 2 and 3 are supported.
         time_dependent (bool): time-dependent or time-independent.
-        weight (optional, float or list of float or lambda function): weight in computing equation loss. The default value is 1.0.        
+        weight (optional, float or list of float or lambda function): weight in computing equation loss. The default value is 1.0.
 
     Example:
         >>> import paddlescience as psci

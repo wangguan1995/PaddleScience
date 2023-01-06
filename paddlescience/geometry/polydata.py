@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .geometry_discrete import GeometryDiscrete
-from .geometry import Geometry
-import numpy as np
-import math
 import pyvista as pv
+
+from .geometry import Geometry
 
 __all__ = ['PolyData']
 
@@ -28,12 +26,12 @@ class PolyData(Geometry):
 
     Parameters:
         vertices(integer numpy.ndarray | float numpy.ndarray | double numpy.ndarray): Cordinate of points. Note that only 3D point data is supported currently.
-        faces(integer numpy.ndarray): Face connectivity array. Note that faces must contain padding indicating the number of points in the face. And it needs to satisfy the right-hand rule. 
+        faces(integer numpy.ndarray): Face connectivity array. Note that faces must contain padding indicating the number of points in the face. And it needs to satisfy the right-hand rule.
 
     Example:
         >>> import paddlescience as psci
-        >>> vertices = np.array([[3, 3, 0], [7, 3, 0], 
-        >>>    [5, 7, 0], [3, 3, 0.5], 
+        >>> vertices = np.array([[3, 3, 0], [7, 3, 0],
+        >>>    [5, 7, 0], [3, 3, 0.5],
         >>>    [7, 3, 0.5], [5, 7, 0.5]])
         >>> # Right-hand rule
         >>> faces = np.hstack(

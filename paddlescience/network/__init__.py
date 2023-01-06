@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .network_fc import FCNet
-from .grad_norm import GradNorm
 import paddle.nn.initializer as initializer
+
+from .grad_norm import GradNorm
+from .network_fc import FCNet

@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import copy
 import types
-import vtk
-from pyevtk.hl import pointsToVTK
+
+import numpy as np
 import paddle
+from pyevtk.hl import pointsToVTK
+
 from .. import config
 from ..solver.utils import data_parallel_partition
 
@@ -219,7 +220,7 @@ def __concatenate_geo(geo_disc):
     ndims = len(points[0])
 
     # to pointsToVTK input format
-    points_vtk = list()
+    points_vtk = []
     for i in range(ndims):
         points_vtk.append(points[:, i].copy())
 
@@ -233,7 +234,7 @@ def __concatenate_cord(cordinates):
     points = np.concatenate(x, axis=0)
 
     # to pointsToVTK input format
-    points_vtk = list()
+    points_vtk = []
     for i in range(ndims):
         points_vtk.append(points[:, i].copy())
 
@@ -248,7 +249,7 @@ def __concatenate_data(outs, nt=None):
     data = dict()
 
     # to numpy
-    npouts = list()
+    npouts = []
     if nt is None:
         nouts = len(outs)
     else:
@@ -263,12 +264,12 @@ def __concatenate_data(outs, nt=None):
 
     # concatenate data
     ndata = outs[0].shape[1]
-    data_vtk = list()
+    data_vtk = []
 
     n = 1 if (nt is None) else nt
     for t in range(n):
         for i in range(ndata):
-            x = list()
+            x = []
             for out in npouts:
                 s = int(len(out) / n) * t
                 e = int(len(out) / n) * (t + 1)

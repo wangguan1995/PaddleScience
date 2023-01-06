@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import numpy as np
-import paddle
 
 
 class GeometryDiscrete:
@@ -38,7 +37,7 @@ class GeometryDiscrete:
     def add_customized_points(self, cordinate):
         """
         Add cutomized points (cordinate) to geometry
-    
+
         Parameters:
             cord(array): Cordinate of customized points
 
@@ -75,7 +74,7 @@ class GeometryDiscrete:
 
     def split(self, nprocs=1):
 
-        dp = list()
+        dp = []
         for i in range(nprocs):
             dp.append(self.sub(nprocs, i))
         return dp

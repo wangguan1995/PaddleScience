@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .pde_base import PDE
 import sympy
-import numpy as np
+
+from .pde_base import PDE
 
 __all__ = ['Laplace']
 
@@ -23,7 +23,7 @@ __all__ = ['Laplace']
 class Laplace(PDE):
     """
     Laplace Equation
-    
+
     Parameters:
         dim (integer): equation's dimention. 1, 2 and 3 are supported.
         weight (optional, float or list of float): weight used in computing equation loss. The default value is 1.0.

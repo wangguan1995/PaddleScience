@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle
-from .algorithm_base import AlgorithmBase
-from ..inputs import InputsAttr
-from ..labels import LabelInt, LabelHolder
-from ..loss import FormulaLoss
-
 from collections import OrderedDict
+
 import numpy as np
+import paddle
+
+from ..inputs import InputsAttr
+from ..labels import LabelHolder, LabelInt
+from ..loss import FormulaLoss
+from .algorithm_base import AlgorithmBase
 
 
 class PINNs(AlgorithmBase):
@@ -51,9 +52,6 @@ class PINNs(AlgorithmBase):
         else:
             inputs, inputs_attr = self.create_inputs_from_pde(pde)
 
-        # self.__print_input(inputs)
-        # self.__print_input_attr(inputs_attr)
-
         return inputs, inputs_attr
 
     def create_labels(self, pde, interior_shape=None, supervised_shape=None):
@@ -63,27 +61,24 @@ class PINNs(AlgorithmBase):
             labels, labels_attr = self.create_labels_from_pde(
                 pde, interior_shape, supervised_shape)
 
-        # self.__print_label(labels)
-        # self.__print_label_attr(labels_attr)
-
         return labels, labels_attr
 
     # create inputs used as net input
     def create_inputs_from_pde(self, pde):
 
-        inputs = list()
+        inputs = []
         inputs_attr = OrderedDict()
 
         # TODO: remove hard code "0"
 
         # interior: inputs_attr["interior"]["0"]
         inputs_attr_i = OrderedDict()
-        points = pde.geometry.interior
+        interior_points = pde.geometry.interior
         if pde.time_dependent == True and pde.time_disc_method is None:
             # time dependent equation with continue method
-            data = self.__timespace(pde.time_array[1::], points)
+            data = self.__timespace(pde.time_array[1::], interior_points)
         else:
-            data = points
+            data = interior_points
         inputs.append(data)
         inputs_attr_i["0"] = InputsAttr(0, 0)
         inputs_attr["interior"] = inputs_attr_i
@@ -133,13 +128,13 @@ class PINNs(AlgorithmBase):
 
         return inputs, inputs_attr
 
-    # create labels used in computing loss, but not used as net input 
+    # create labels used in computing loss, but not used as net input
     def create_labels_from_pde(self,
                                pde,
                                interior_shape=None,
                                supervised_shape=None):
 
-        labels = list()
+        labels = []
         labels_attr = OrderedDict()
 
         # interior
@@ -148,7 +143,7 @@ class PINNs(AlgorithmBase):
         #   - labels_attr["interior"]["equations"][i]["parameter"]
         #   - labels_attr["interior"]["data_cur"][i]
         labels_attr["interior"] = OrderedDict()
-        labels_attr["interior"]["equations"] = list()
+        labels_attr["interior"]["equations"] = []
         for i in range(len(pde.equations)):
             attr = dict()
 
@@ -176,7 +171,7 @@ class PINNs(AlgorithmBase):
 
         # interior data_cur: soluiton of current time step on interior points (time-discretized)
         if pde.time_disc_method is not None:
-            labels_attr["interior"]["data_cur"] = list()
+            labels_attr["interior"]["data_cur"] = []
             for i in range(len(pde.dvar_n)):
                 labels_attr["interior"]["data_cur"].append(
                     LabelInt(len(labels)))
@@ -191,7 +186,7 @@ class PINNs(AlgorithmBase):
         #   - labels_attr["bc"][name_b][i]["normal"]
         labels_attr["bc"] = OrderedDict()
         for name_b, bc in pde.bc.items():
-            labels_attr["bc"][name_b] = list()
+            labels_attr["bc"][name_b] = []
             for b in bc:
                 attr = dict()
                 rhs = b.rhs_disc
@@ -240,9 +235,9 @@ class PINNs(AlgorithmBase):
                 labels_attr["bc"][name_b].append(attr)
 
         # ic
-        #   - labels_attr["ic"][i]["rhs"] 
-        #   - labels_attr["ic"][i]["weight"], weight is None or scalar 
-        labels_attr["ic"] = list()
+        #   - labels_attr["ic"][i]["rhs"]
+        #   - labels_attr["ic"][i]["weight"], weight is None or scalar
+        labels_attr["ic"] = []
         for ic in pde.ic:
             attr = dict()
             # rhs
@@ -265,13 +260,13 @@ class PINNs(AlgorithmBase):
         #   - labels_attr["user"]["data_cur"][i]
         #   - labels_attr["user"]["data_next"][i]
 
-        # data_cur: solution of current time step on user points 
-        # data_next: reference solution of next time step on user points 
+        # data_cur: solution of current time step on user points
+        # data_next: reference solution of next time step on user points
         if pde.geometry.user is not None:
             labels_attr["user"] = OrderedDict()
 
             # equation
-            labels_attr["user"]["equations"] = list()
+            labels_attr["user"]["equations"] = []
             for i in range(len(pde.equations)):
                 attr = dict()
 
@@ -294,7 +289,7 @@ class PINNs(AlgorithmBase):
                 labels_attr["user"]["equations"].append(attr)
 
             # data next
-            labels_attr["user"]["data_next"] = list()
+            labels_attr["user"]["data_next"] = []
             for i in range(len(pde.dvar)):
                 labels_attr["user"]["data_next"].append(LabelInt(len(labels)))
                 if supervised_shape == None:
@@ -304,7 +299,7 @@ class PINNs(AlgorithmBase):
 
             # data cur
             if pde.time_disc_method is not None:
-                labels_attr["user"]["data_cur"] = list()
+                labels_attr["user"]["data_cur"] = []
                 for i in range(len(pde.dvar_n)):
                     labels_attr["user"]["data_cur"].append(
                         LabelInt(len(labels)))
@@ -318,7 +313,7 @@ class PINNs(AlgorithmBase):
 
     def create_inputs_from_loss(self, pde):
 
-        inputs = list()
+        inputs = []
         inputs_attr = OrderedDict()
 
         inputs_attr_i = OrderedDict()
@@ -383,12 +378,12 @@ class PINNs(AlgorithmBase):
 
     def create_labels_from_loss(self, pde):
 
-        labels = list()
+        labels = []
         labels_attr = OrderedDict()
 
         # equation
         labels_attr["interior"] = OrderedDict()
-        labels_attr["interior"]["equations"] = list()
+        labels_attr["interior"]["equations"] = []
         for i in range(len(pde.equations)):
             eq = pde.equations[i]
             attr = dict()
@@ -410,7 +405,7 @@ class PINNs(AlgorithmBase):
         for name_b, bc in pde.bc.items():
             if name_b in self.loss._bclist:
                 idx = self.loss._bclist.index(name_b)
-                labels_attr["bc"][name_b] = list()
+                labels_attr["bc"][name_b] = []
                 for b in bc:
                     attr = dict()
                     # rhs
@@ -428,7 +423,7 @@ class PINNs(AlgorithmBase):
                     labels_attr["bc"][name_b].append(attr)
 
         # ic
-        labels_attr["ic"] = list()
+        labels_attr["ic"] = []
         if True in self.loss._iclist:
             for ic in pde.ic:
                 attr = dict()
@@ -449,7 +444,7 @@ class PINNs(AlgorithmBase):
             labels_attr["user"] = OrderedDict()
 
             # equation
-            labels_attr["user"]["equations"] = list()
+            labels_attr["user"]["equations"] = []
             for i in range(len(pde.equations)):
                 eq = pde.equations[i]
                 attr = dict()
@@ -467,7 +462,7 @@ class PINNs(AlgorithmBase):
                     labels_attr["user"]["equations"].append(attr)
 
             # data next
-            labels_attr["user"]["data_next"] = list()
+            labels_attr["user"]["data_next"] = []
             n = self.loss._supref[0].shape[-1]
             for i in range(n):
                 labels_attr["user"]["data_next"].append(LabelInt(len(labels)))
@@ -479,40 +474,6 @@ class PINNs(AlgorithmBase):
             labels[i] = self.__padding_array(nprocs, labels[i])
 
         return labels, labels_attr
-
-    # print label
-    def __print_label(self, label):
-        print(" ** labels ** ")
-        for i in label:
-            print(i.shape)
-        print("")
-
-    # print label_attr 
-    def __print_label_attr(self, attr):
-
-        print("** interior-equations ** ")
-        for i in attr["interior"]["equations"]:
-            print(i)
-
-        print("** bc **")
-        for k in attr["bc"].keys():
-            print("- key: ", k)
-            for i in attr["bc"][k]:
-                print(i)
-
-        print("** ic **")
-        for i in attr["ic"]:
-            print(i)
-
-        print("** user-equations ** ")
-        for i in attr["user"]["equations"]:
-            print(i)
-
-        print("** user-data ** ")
-        for i in attr["user"]["data_next"]:
-            print(i)
-
-        print("")
 
     def feed_data_interior_cur(self, labels, labels_attr, data):
         n = len(labels_attr["interior"]["data_cur"])
@@ -539,28 +500,25 @@ class PINNs(AlgorithmBase):
         return labels
 
     def compute_forward(self, params, *inputs):
-
-        outs = list()
-
+        outs = []
         for i in inputs:
             out = self.net.nn_func(i, params)
             outs.append(out)
-
         return outs
 
     def compute(self, params, *inputs_labels, ninputs, inputs_attr, nlabels,
                 labels_attr, pde):
 
-        outs = list()
+        outs = []
 
         inputs = inputs_labels[0:ninputs]  # inputs is from zero to ninputs
         labels = inputs_labels[ninputs::]  # labels is the rest
 
-        # loss 
+        # loss
         #   - interior points: eq loss
         #   - boundary points: bc loss
         #   - initial points:  ic loss
-        #   - data points: data loss and eq loss 
+        #   - data points: data loss and eq loss
         loss_eq = 0.0
         loss_bc = 0.0
         loss_ic = 0.0
@@ -587,7 +545,7 @@ class PINNs(AlgorithmBase):
             outs.append(out_i)
             n += 1
 
-        # boundary points: compute bc_loss 
+        # boundary points: compute bc_loss
         for name_b, input_attr in inputs_attr["bc"].items():
             input = inputs[n]
 
@@ -667,7 +625,7 @@ class PINNs(AlgorithmBase):
             pass
             # TODO: error out
 
-        loss_details = list()
+        loss_details = []
         loss_details.append(self.__sqrt(loss_eq))
         loss_details.append(self.__sqrt(loss_bc))
         loss_ic = (loss - loss) if isinstance(loss_ic, float) else loss_ic
@@ -677,38 +635,3 @@ class PINNs(AlgorithmBase):
         loss_details.append(self.__sqrt(loss_data))
 
         return loss, outs, loss_details
-
-    def __timespace(self, time, space):
-
-        nt = len(time)
-        ns = len(space)
-        ndims = len(space[0])
-        time_r = np.repeat(time, ns).reshape((nt * ns, 1))
-        space_r = np.tile(space, (nt, 1)).reshape((nt * ns, ndims))
-        timespace = np.concatenate([time_r, space_r], axis=1)
-        return timespace
-
-    def __repeatspace(self, time, space):
-
-        nt = len(time)
-        ns = len(space)
-        space_r = np.tile(space, (nt, 1)).reshape((nt * ns))
-        return space_r
-
-    def __sqrt(self, x):
-        if np.isscalar(x):
-            return np.sqrt(x)
-        else:
-            return paddle.sqrt(x)
-
-    def __padding_array(self, nprocs, array):
-        npad = (nprocs - len(array) % nprocs) % nprocs  # pad npad elements
-        if array.ndim == 2:
-            datapad = array[-1, :].reshape((-1, array[-1, :].shape[0]))
-            for i in range(npad):
-                array = np.append(array, datapad, axis=0)
-        elif array.ndim == 1:
-            datapad = array[-1]
-            for i in range(npad):
-                array = np.append(array, datapad)
-        return array

@@ -17,13 +17,12 @@ Created in May. 2022
 @author: Hui Xiang, Yanbo Zhang, Shengze Cai
 """
 
-import time
-import paddle
 import numpy as np
-import paddlescience as psci
-import paddle.distributed as dist
+import paddle
+from paddle.distributed.fleet.utils.hybrid_parallel_util import \
+    fused_allreduce_gradients
 
-from paddle.distributed.fleet.utils.hybrid_parallel_util import fused_allreduce_gradients
+import paddlescience as psci
 
 __all__ = ["PINN_Solver"]
 
@@ -214,7 +213,7 @@ class PysicsInformedNeuralNetwork:
         p_x = self.autograd(p, x)
         p_y = self.autograd(p, y)
 
-        # NS 
+        # NS
         eq1 = (u * u_x + v * u_y) + p_x - (self.nu) * (u_xx + u_yy) + u_t
         eq2 = (u * v_x + v * v_y) + p_y - (self.nu) * (v_xx + v_yy) + v_t
         # Continuty
@@ -294,7 +293,7 @@ class PysicsInformedNeuralNetwork:
                 self.loss_s = paddle.mean(paddle.square(self.u_s.reshape([-1]) - self.u_pred_s.reshape([-1]))) + \
                               paddle.mean(paddle.square(self.v_s.reshape([-1]) - self.v_pred_s.reshape([-1])))
 
-        # equation        
+        # equation
         if self.training_type == 'unsupervised' or self.training_type == 'half-supervised':
             (self.eq1_pred, self.eq2_pred,
              self.eq3_pred) = self.neural_net_equations(self.t_f, self.x_f,

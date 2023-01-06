@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle
 import numpy as np
-from .loss_base import CompFormula, l2_norm_square
-from ..labels import LabelInt
+import paddle
+
 from .. import config
+from ..labels import LabelInt
+from .loss_base import CompFormula
+from .loss_base import l2_norm_square
 
 
 class L2:
@@ -49,7 +51,7 @@ class L2:
 
         #TODO: check input
 
-    # compute loss on one interior 
+    # compute loss on one interior
     # there are multiple pde
 
     def eq_loss(self,
@@ -142,7 +144,7 @@ class L2:
             rst = cmploss.compute_formula(formula, input, input_attr, labels,
                                           labels_attr, normal, params)
 
-            # TODO: simplify                                  
+            # TODO: simplify
             rhs_b = labels_attr["bc"][name_b][i]["rhs"]
             if type(rhs_b) == LabelInt:
                 rhs = labels[rhs_b]
@@ -205,7 +207,7 @@ class L2:
 
         return loss, cmploss.outs
 
-    # compute loss on real data 
+    # compute loss on real data
     def data_loss(self,
                   pde,
                   net,

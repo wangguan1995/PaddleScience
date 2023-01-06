@@ -11,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import yaml
 import argparse
-from .config import enable_visualdl, enable_static, enable_prim
+import os
+
+import yaml
+
+from .config import enable_prim, enable_static, enable_visualdl
 
 __all__ = ['parse_args']
 

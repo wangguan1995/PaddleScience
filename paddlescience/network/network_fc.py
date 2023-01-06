@@ -14,6 +14,7 @@
 
 import paddle
 import paddle.nn.functional as F
+
 from .network_base import NetworkBase
 
 
@@ -32,7 +33,7 @@ class FCNet(NetworkBase):
         num_outs (integer): Number of outputs.
         num_layers (integer): Number of layers.
         hidden_size (integer): Hiden size in each layer.
-        activation (optional, "tanh" / "sigmoid" / PaddlePaddle's operator): Activation function used in each layer. Currently, expected input is string format[sigmoid, tanh] or PaddlePaddle's operator (e.g. paddle.exp). The default value is "tanh".  
+        activation (optional, "tanh" / "sigmoid" / PaddlePaddle's operator): Activation function used in each layer. Currently, expected input is string format[sigmoid, tanh] or PaddlePaddle's operator (e.g. paddle.exp). The default value is "tanh".
 
     Example:
         >>> import paddlescience as psci
@@ -81,7 +82,7 @@ class FCNet(NetworkBase):
         # self.make_network_static()
         self.params_path = None
 
-        # dynamic mode: net's parameters 
+        # dynamic mode: net's parameters
         # static  mode: None
     def parameters(self):
         if paddle.in_dynamic_mode():
@@ -146,11 +147,11 @@ class FCNet(NetworkBase):
         - initialize with paddle.nn.initializer. This needs to specify parameter "n", "weight_init/bias_init" and "learning_rate".
 
         Parameters:
-            path (string): parameter file 
+            path (string): parameter file
             n (integer or list of integer): layers to initialize
             weight_init (paddle.nn.initializer): initializer used for weight
             bias_init (paddle.nn.initializer): initializer used for bias
-            learning_rate (float, optional): learning rate 
+            learning_rate (float, optional): learning rate
 
         Example:
             >>> import paddlescience as psci
@@ -162,13 +163,13 @@ class FCNet(NetworkBase):
             >>> # option 2: initialize layer 1 and layer 2 with constants
             >>> wcst = paddle.nn.initializer.Constant(2.0)
             >>> bcst = paddle.nn.initializer.Constant(3.0)
-            >>> net.initialize(n=[1,2], weight_init=wcst, bias_init=bcst) 
+            >>> net.initialize(n=[1,2], weight_init=wcst, bias_init=bcst)
         """
 
         if type(path) is str:
             self.params_path = path
             # In dynamic graph mode, load the params.
-            # In static graph mode, just save the filename 
+            # In static graph mode, just save the filename
             # and initialize it in solver program.
             if paddle.in_dynamic_mode():
                 layer_state_dict = paddle.load(path)
@@ -190,7 +191,7 @@ class FCNet(NetworkBase):
                     lsize = self.hidden_size
                     rsize = self.hidden_size
 
-                # update weight 
+                # update weight
                 if weight_init is not None:
                     w_attr = paddle.ParamAttr(
                         name="w_" + str(i),

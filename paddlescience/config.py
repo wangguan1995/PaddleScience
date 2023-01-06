@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle
 import os
+
+import paddle
 
 _dtype = 'float32'
 _use_visualdl = False
@@ -62,7 +63,7 @@ def enable_static():
 
 def enable_prim():
     '''
-    Enable automatic differentiation mechanism based on 
+    Enable automatic differentiation mechanism based on
     automatic differentiation basic operator.
     '''
     if paddle.in_dynamic_mode():
@@ -73,7 +74,7 @@ def enable_prim():
 
 def disable_prim():
     '''
-    Disable automatic differentiation mechanism based on 
+    Disable automatic differentiation mechanism based on
     automatic differentiation basic operator.
     '''
     if paddle.in_dynamic_mode():
@@ -84,7 +85,7 @@ def disable_prim():
 
 def prim_enabled():
     '''
-    Determine whether automatic differentiation based on 
+    Determine whether automatic differentiation based on
     automatic differentiation basic operator is enabled.
     '''
     if paddle.in_dynamic_mode():

@@ -12,4 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .optimizer import Adam, Lbfgs, Bfgs
+from .optimizer import Adam
+from .optimizer import Bfgs
+from .optimizer import Lbfgs

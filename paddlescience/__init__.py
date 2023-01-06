@@ -16,19 +16,19 @@ __version__ = '1.0 Beta'
 
 import paddle
 
-from . import config
-from . import parameter
-from . import geometry
-from . import bc
-from . import ic
-from . import pde
-from . import network
 from . import algorithm
-from . import loss
-from . import optimizer
-from . import solver
-from . import visu
+from . import bc
+from . import config
 from . import data
+from . import geometry
+from . import ic
+from . import loss
+from . import network
+from . import optimizer
+from . import parameter
+from . import pde
+from . import solver
 from . import utils
+from . import visu
 
 config.try_enable_cinn()

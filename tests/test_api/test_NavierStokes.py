@@ -1,21 +1,22 @@
 # Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
-import sympy
 import numpy as np
 import pytest
+import sympy
+
+import paddlescience as psci
 
 
 def jud_ns(geo_disc,
@@ -39,7 +40,7 @@ def jud_ns(geo_disc,
     else:
         pde_disc = pde.discretize(geo_disc=geo_disc)
 
-    indvar, dvar = list(), list()
+    indvar, dvar = [], list()
 
     if dim == 2:
         dvar_name = ['u', 'v', 'p']

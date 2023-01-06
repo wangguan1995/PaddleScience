@@ -11,15 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import numpy as np
+import time
+
 import paddle
 from paddle.distributed.fleet import auto
-from paddle.incubate.optimizer.functional.lbfgs import minimize_lbfgs
 from paddle.incubate.optimizer.functional.bfgs import minimize_bfgs
-from . import utils
-from .. import config
+from paddle.incubate.optimizer.functional.lbfgs import minimize_lbfgs
 from visualdl import LogWriter
-import time
+
+from .. import config
+from . import utils
 
 __all__ = ["Solver"]
 
@@ -78,7 +79,7 @@ def loss_func(x, y):
 class Solver(object):
     """
     Solver
- 
+
     Parameters:
         pde(paddlescience.pde): The PDE used in the solver.
         algo(Algorithm): The algorithm used in the solver.
@@ -170,7 +171,7 @@ class Solver(object):
             self.labels = labels
             self.labels_attr = labels_attr
 
-    # solve static 
+    # solve static
     def __solve_dynamic(self, num_epoch, bs, checkpoint_freq, checkpoint_path):
 
         inputs = self.inputs
@@ -353,7 +354,7 @@ class Solver(object):
 
     # predict dynamic
     def __predict_dynamic(self):
-        # create inputs 
+        # create inputs
         inputs, inputs_attr = self.algo.create_inputs(self.pde)
 
         # convert inputs to tensor
@@ -394,7 +395,7 @@ class Solver(object):
             ninputs = len(self.inputs)
             nlabels = len(self.labels)
 
-            inputs_labels = list()
+            inputs_labels = []
 
             self.train_program = paddle.static.Program()
             self.startup_program = paddle.static.Program()
@@ -404,7 +405,7 @@ class Solver(object):
                                              self.startup_program):
 
                 # dynamic mode: make network in net's constructor
-                # static  mode: make network here 
+                # static  mode: make network here
                 self.algo.net.make_network()
 
                 # inputs
@@ -563,7 +564,7 @@ class Solver(object):
             with paddle.utils.unique_name.guard():
 
                 self.algo.net.make_network()
-                ins = list()
+                ins = []
                 for i in range(len(self.inputs)):
                     ishape = list(self.inputs[i].shape)
                     ishape[0] = -1
@@ -583,7 +584,7 @@ class Solver(object):
             feeds['input' + str(i)] = self.inputs[i]
 
         # fetch outputs
-        fetches = list()
+        fetches = []
         for out in self.outs_predict:
             fetches.append(out.name)
 
@@ -652,7 +653,7 @@ class Solver(object):
             with paddle.utils.unique_name.guard():
 
                 self.algo.net.make_network()
-                ins = list()
+                ins = []
                 for i in range(len(inputs)):
                     ishape = list(inputs[i].shape)
                     ishape[0] = -1

@@ -17,14 +17,12 @@ Created in May. 2022
 PINNs for Inverse VIV Problem
 @Author: Xuhui Meng, Zhicheng Wang, Hui Xiang, Yanbo Zhang
 '''
-import time
-import paddle
-import numpy as np
-import paddle.nn as nn
-import paddlescience as psci
-import paddle.distributed as dist
 
-from paddle.distributed.fleet.utils.hybrid_parallel_util import fused_allreduce_gradients
+import numpy as np
+import paddle
+import paddle.nn as nn
+
+import paddlescience as psci
 
 __all__ = ["PINN_Solver"]
 

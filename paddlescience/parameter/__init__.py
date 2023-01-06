@@ -12,4 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .parameter import Parameter, is_parameter
+from .parameter import is_parameter
+from .parameter import Parameter

@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .pde_base import PDE
-
 import sympy
-import numpy as np
+
+from .pde_base import PDE
 
 __all__ = ['Poisson']
 
@@ -23,7 +22,7 @@ __all__ = ['Poisson']
 class Poisson(PDE):
     """
     Poisson Equation
-    
+
     .. math::
         \Delta u = rhs
 

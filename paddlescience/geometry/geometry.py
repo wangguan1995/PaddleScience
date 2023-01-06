@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .. import config
-from .geometry_discrete import GeometryDiscrete
 import numpy as np
-import vtk
-import matplotlib.pyplot as plt
 import paddle
 import pyvista as pv
 from pysdf import SDF
+
+from .. import config
+from .geometry_discrete import GeometryDiscrete
 
 
 # Geometry
@@ -136,14 +135,14 @@ class Geometry:
         npoints = len(points)
 
         # list of point's columns, used as input of criterial (lambda)
-        data = list()
+        data = []
         for n in range(self.ndims):
             data.append(points[:, n])
 
         # init as True
         flag_i = np.full(npoints, True, dtype='bool')
 
-        # boundary points defined by criterial 
+        # boundary points defined by criterial
         for name in self.criteria.keys():
 
             # flag bounday points
@@ -180,7 +179,7 @@ class Geometry:
         # extract remain points, i.e. interior points
         geo_disc.interior = points[flag_i, :]
 
-        # TODO: Note that the currently generated points are inaccurate 
+        # TODO: Note that the currently generated points are inaccurate
         # and will be fixed in the future
 
         # padding

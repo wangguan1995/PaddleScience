@@ -1,48 +1,49 @@
 # Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle
-import numpy as np
-from .loss_base import CompFormula, l2_norm_square
-from ..labels import LabelInt
-from .. import config
 import copy
+
+import paddle
+
+from ..labels import LabelInt
+from .loss_base import CompFormula
+from .loss_base import l2_norm_square
 
 
 class FormulaLoss:
     def __init__(self):
-        self._eqlist = list()
-        self._bclist = list()
-        self._iclist = list()
-        self._suplist = list()
+        self._eqlist = []
+        self._bclist = []
+        self._iclist = []
+        self._suplist = []
 
-        self._eqwgt = list()
-        self._bcwgt = list()
-        self._icwgt = list()
-        self._supwgt = list()
+        self._eqwgt = []
+        self._bcwgt = []
+        self._icwgt = []
+        self._supwgt = []
 
-        self._eqinput = list()
-        self._bcinput = list()
-        self._icinput = list()
-        self._supinput = list()
+        self._eqinput = []
+        self._bcinput = []
+        self._icinput = []
+        self._supinput = []
 
-        self._eqnet = list()
-        self._bcnet = list()
-        self._icnet = list()
-        self._supnet = list()
+        self._eqnet = []
+        self._bcnet = []
+        self._icnet = []
+        self._supnet = []
 
-        self._supref = list()
+        self._supref = []
 
         self.norm_p = 1
 
@@ -169,7 +170,7 @@ class FormulaLoss:
             rst = cmploss.compute_formula(formula, input, input_attr, labels,
                                           labels_attr, None)
 
-            # TODO: simplify                                 
+            # TODO: simplify
             rhs_b = labels_attr["bc"][name_b][i]["rhs"]
             if type(rhs_b) == LabelInt:
                 rhs = labels[rhs_b]
@@ -217,7 +218,7 @@ class FormulaLoss:
 
         return loss, cmploss.outs
 
-    # compute loss on real data 
+    # compute loss on real data
     def data_loss(self,
                   pde,
                   net,
@@ -247,9 +248,9 @@ class FormulaLoss:
 def EqLoss(eq, netout=None):
     """
     Define equation loss
- 
+
     Parameters:
-        eq (pde.equation): Equation 
+        eq (pde.equation): Equation
         netout (optional): output of network
 
     Example
@@ -274,7 +275,7 @@ def EqLoss(eq, netout=None):
 def BcLoss(name, netout=None):
     """
     Define boundary loss
- 
+
     Parameters:
         name (string): boundary name
         netout (optional): output of network
@@ -301,9 +302,9 @@ def BcLoss(name, netout=None):
 def IcLoss(netout=None):
     """
     Define initial loss for time-dependent equation
- 
+
     Parameters:
-        netout (optional): output of network  
+        netout (optional): output of network
 
     Example:
         >>> import paddlescience as psci
@@ -327,10 +328,10 @@ def IcLoss(netout=None):
 def DataLoss(netout=None, ref=None):
     """
     Define supervised loss
- 
+
     Parameters:
         netout (optional): output of network
-        ref (numpy.ndarray or Tensor) : reference values on supervise points   
+        ref (numpy.ndarray or Tensor) : reference values on supervise points
 
     Example:
         >>> import paddlescience as psci

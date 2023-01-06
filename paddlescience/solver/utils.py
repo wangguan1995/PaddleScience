@@ -1,32 +1,35 @@
 # Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import six
-import numpy as np
 import time
+
+import numpy as np
 import paddle
+# auto parallel
+import paddle.distributed.auto_parallel as auto
+import six
 from paddle import fluid
+from paddle.distributed.auto_parallel.completion import Completer
+from paddle.distributed.auto_parallel.dist_context import (
+    DistributedContext, get_default_distributed_context,
+    set_default_distributed_context)
+from paddle.distributed.auto_parallel.partitioner import Partitioner
+from paddle.distributed.auto_parallel.utils import set_var_dist_attr
 from paddle.fluid import core
 from paddle.fluid.framework import Variable
 from paddle.static import global_scope
 
-# auto parallel
-import paddle.distributed.auto_parallel as auto
-from paddle.distributed.auto_parallel.completion import Completer
-from paddle.distributed.auto_parallel.partitioner import Partitioner
-from paddle.distributed.auto_parallel.utils import set_var_dist_attr
-from paddle.distributed.auto_parallel.dist_context import DistributedContext, get_default_distributed_context, set_default_distributed_context
 nranks = paddle.distributed.get_world_size()
 rank = paddle.distributed.get_rank()
 
@@ -274,7 +277,7 @@ def compile_and_convert_back_to_program(program=None,
 
 def set_init_dist_attr(serial_main_prog):
 
-    # set init dp attr    
+    # set init dp attr
     default_dist_context = get_default_distributed_context()
     _global_parallel_strategy = "dp"
     _global_process_mesh = auto.ProcessMesh(list(range(nranks)))
@@ -293,7 +296,8 @@ def set_init_dist_attr(serial_main_prog):
 
 
 def init_comm():
-    from paddle.distributed.auto_parallel.process_group import get_all_process_groups
+    from paddle.distributed.auto_parallel.process_group import \
+        get_all_process_groups
     all_process_groups = get_all_process_groups()
     for process_group in all_process_groups:
         if rank not in process_group.ranks:

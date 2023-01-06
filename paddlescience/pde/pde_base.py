@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .. import config
-import numpy as np
-import types
-import sympy
 import collections
+import types
+
+import numpy as np
+import sympy
+
+from .. import config
 
 __all__ = ['PDE']
 
@@ -56,7 +58,7 @@ class PDE:
             pass  # TODO: error out
 
         # dependent variable on previous time step n-1
-        self.dvar_n = list()
+        self.dvar_n = []
 
         # time dependent / time independent
         self.time_dependent = False
@@ -66,11 +68,11 @@ class PDE:
                 break
 
         # parameter in pde
-        self.parameter = list()
+        self.parameter = []
 
         # equation and right-hand side
-        self.equations = list()
-        self.rhs = list()
+        self.equations = []
+        self.rhs = []
 
         # # order
         # self.order = order
@@ -79,7 +81,7 @@ class PDE:
         self.bc = collections.OrderedDict()
 
         # initial condition
-        self.ic = list()
+        self.ic = []
 
         # geometry
         self.geometry = None
@@ -88,10 +90,10 @@ class PDE:
         self.weight = weight
 
         # rhs disc
-        self.rhs_disc = list()
+        self.rhs_disc = []
 
         # weight disc
-        self.weight_disc = list()
+        self.weight_disc = []
 
         # discretize method (for time-dependent)
         self.time_disc_method = None
@@ -128,7 +130,7 @@ class PDE:
 
         Parameters:
             name (string): boundary name.
-            args (boundary conditions): boundary conditions which are added to boundary. 
+            args (boundary conditions): boundary conditions which are added to boundary.
 
         Example:
             >>> import paddlescience as psci
@@ -141,7 +143,7 @@ class PDE:
         """
 
         if name not in self.bc:
-            self.bc[name] = list()
+            self.bc[name] = []
 
         for arg in args:
             arg.to_formula(self.indvar)
@@ -155,12 +157,12 @@ class PDE:
         Add initial condition for time-dependent equation
 
         Parameters:
-            args (initial conditions): initial conditions 
+            args (initial conditions): initial conditions
 
         Example:
             >>> pde = psci.pde.NavierStokes(dim=3, time_dependent=True)
-            >>> ic1 = psci.ic.IC('u', rhs=0) 
-            >>> ic2 = psci.ic.IC('v', rhs=0) 
+            >>> ic1 = psci.ic.IC('u', rhs=0)
+            >>> ic2 = psci.ic.IC('v', rhs=0)
             >>> pde.set_ic(ic1, ic2)         # add initial conditions
        """
         for arg in args:
@@ -193,7 +195,7 @@ class PDE:
         Discretize equations
 
         Parameters:
-            time_method (None or "implicit"): 
+            time_method (None or "implicit"):
                 "implicit": discretize time-dependent Navier-Stokes equations with implicit method
             time_step (integer): number of time steps for time-dependent equation
             geo_disc (GeometryDisc): discrete geometry
@@ -228,18 +230,18 @@ class PDE:
 
         # bc
         for name, bc in self.bc.items():
-            pde_disc.bc[name] = list()
+            pde_disc.bc[name] = []
             for i in range(len(bc)):
                 bc_disc = bc[i].discretize(pde_disc.indvar)
                 pde_disc.bc[name].append(bc_disc)
 
         # discritize r hs in equation for interior points
         pde_disc.rhs_disc = dict()
-        pde_disc.rhs_disc["interior"] = list()
+        pde_disc.rhs_disc["interior"] = []
         for rhs in pde_disc.rhs:
             points_i = pde_disc.geometry.interior
 
-            data = list()
+            data = []
             for n in range(len(points_i[0])):
                 data.append(points_i[:, n])
 
@@ -250,11 +252,11 @@ class PDE:
 
         # discritize rhs in equation for user points
         if pde_disc.geometry.user is not None:
-            pde_disc.rhs_disc["user"] = list()
+            pde_disc.rhs_disc["user"] = []
             for rhs in pde_disc.rhs:
                 points_i = pde_disc.geometry.user
 
-                data = list()
+                data = []
                 for n in range(len(points_i[0])):
                     data.append(points_i[:, n])
 
@@ -276,7 +278,7 @@ class PDE:
             points_b = pde_disc.geometry.boundary[name_b]
             normal_b = pde_disc.geometry.normal[name_b]
 
-            data = list()
+            data = []
             for n in range(len(points_b[0])):
                 data.append(points_b[:, n])
 
@@ -303,7 +305,7 @@ class PDE:
         for ic in pde_disc.ic:
             points_i = pde_disc.geometry.interior
 
-            data = list()
+            data = []
             for n in range(len(points_i[0])):
                 data.append(points_i[:, n])
 

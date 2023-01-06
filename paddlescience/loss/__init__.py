@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .loss_L2 import L2
-from .loss_formula import EqLoss, BcLoss, IcLoss, DataLoss
+from .loss_formula import BcLoss
+from .loss_formula import DataLoss
+from .loss_formula import EqLoss
 from .loss_formula import FormulaLoss
+from .loss_L2 import L2
