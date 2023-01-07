@@ -1,7 +1,7 @@
 几何图形
 ===================================
 
-.. automodule:: paddlescience.geometry.rectangular
+.. automodule:: ppsci.geometry.rectangular
 
 .. py:class:: Rectangular(space_origin=None, space_extent=None)
 
@@ -17,22 +17,22 @@
       .. code-block:: python
 
          import paddlescience as psci
-         geo = psci.geometry.Rectangular(space_origin=(0.0,0.0), space_extent=(1.0,1.0))
+         geo = ppsci.geometry.Rectangular(space_origin=(0.0,0.0), space_extent=(1.0,1.0))
 
-.. automodule:: paddlescience.geometry.geometry_discrete
+.. automodule:: ppsci.geometry.geometry_discrete
 
 .. py:class:: GeometryDiscrete()
 
    离散几何
 
    .. py:function:: get_bc_index()
-   
+
       获得边界索引
 
          **返回:** bc-index - 返回边界上点的索引。
 
          **返回类型:** numpy数组。
-      
+
    .. py:function:: get_space_domain()
 
       获取空间域上的坐标

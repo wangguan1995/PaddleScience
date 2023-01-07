@@ -21,12 +21,12 @@ import copy
 import numpy as np
 
 import paddle
-import paddlescience as psci
+import ppsci
 import paddle.distributed as dist
 from pyevtk.hl import pointsToVTK
 
 import loading_cfd_data as cfd
-import paddlescience.module.cfd.pinn_solver as psolver
+import ppsci.module.cfd.pinn_solver as psolver
 
 
 def train(net_params=None, distributed_env=False):
@@ -83,7 +83,7 @@ def train(net_params=None, distributed_env=False):
         learning_rate=1e-5, parameters=PINN.net.parameters())
     PINN.train(num_epoch=10, optimizer=adm_opt)
 
-    #bfgs_opt = psci.optimizer.BFGS()
+    #bfgs_opt = ppsci.optimizer.BFGS()
 
 
 if __name__ == "__main__":

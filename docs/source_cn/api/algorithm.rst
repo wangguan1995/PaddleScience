@@ -1,7 +1,7 @@
 算法
 =========
 
-.. automodule:: paddlescience.algorithm.algorithm_pinns
+.. automodule:: ppsci.algorithm.algorithm_pinns
 
 .. py:class:: PINNs(net,loss)
 
@@ -19,4 +19,4 @@
     .. code-block::
 
         import paddlescience as psci
-        algo = psci.algorithm.PINNs(net=net, loss=loss)
+        algo = ppsci.algorithm.PINNs(net=net, loss=loss)

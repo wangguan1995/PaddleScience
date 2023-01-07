@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import sympy
 import pytest
 
@@ -23,7 +23,7 @@ def test_Dirichlet0():
     test0
     """
     indvar = sympy.symbols('x y')
-    ic_v = psci.bc.Dirichlet('v', rhs=0.0)
+    ic_v = ppsci.bc.Dirichlet('v', rhs=0.0)
     r = ic_v.discretize(indvar)
     eq = sympy.Function('v')(*indvar)
     assert r.formula == eq
@@ -35,7 +35,7 @@ def test_Dirichlet1():
     test1
     """
     indvar = sympy.symbols('t x y z')
-    ic_u = psci.bc.Dirichlet('u', rhs=lambda x, y, z: x * y * z)
+    ic_u = ppsci.bc.Dirichlet('u', rhs=lambda x, y, z: x * y * z)
     r = ic_u.discretize(indvar)
     eq = sympy.Function('u')(*indvar)
     assert r.formula == eq
@@ -47,7 +47,7 @@ def test_Dirichlet2():
     test2
     """
     indvar = sympy.symbols('t x y z')
-    ic_u = psci.bc.Dirichlet('u', rhs=lambda x, y, z: x * y * z, weight=0.5)
+    ic_u = ppsci.bc.Dirichlet('u', rhs=lambda x, y, z: x * y * z, weight=0.5)
     r = ic_u.discretize(indvar)
     eq = sympy.Function('u')(*indvar)
     assert r.formula == eq

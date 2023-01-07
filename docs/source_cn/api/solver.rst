@@ -1,7 +1,7 @@
 求解器
 ========
 
-.. automodule:: paddlescience.solver.solver
+.. automodule:: ppsci.solver.solver
 
 .. py:class:: Solver(algo,opt)
 
@@ -16,7 +16,7 @@
    .. code-block:: python
 
          import paddlescience as psci
-         solver = psci.solver.Solver(algo=algo, opt=opt)
+         solver = ppsci.solver.Solver(algo=algo, opt=opt)
 
 
    .. py:function:: solve(num_epoch=1000, batch_size=None, checkpoint_freq=1000)
@@ -42,6 +42,6 @@
    .. code-block::
 
          import paddlescience as psci
-         solver = psci.solver.Solver(algo=algo, opt=opt)
+         solver = ppsci.solver.Solver(algo=algo, opt=opt)
          solution = solver.solve(num_epoch=10000)
          rslt = solution(geo)

@@ -1,6 +1,6 @@
 Optimizer
 =========
 
-.. automodule:: paddlescience.optimizer.optimizer
+.. automodule:: ppsci.optimizer.optimizer
    :members:
    :no-undoc-members:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import numpy as np
 import paddle
 import pytest
@@ -30,7 +30,7 @@ def darcy2d(static=True):
     else:
         paddle.enable_static()
 
-    psci.config.set_dtype("float32")
+    ppsci.config.set_dtype("float32")
 
     # ref solution
     ref_sol = lambda x, y: np.sin(2.0 * np.pi * x) * np.cos(2.0 * np.pi * y)
@@ -39,7 +39,7 @@ def darcy2d(static=True):
     ref_rhs = lambda x, y: 8.0 * np.pi**2 * np.sin(2.0 * np.pi * x) * np.cos(2.0 * np.pi * y)
 
     # set geometry and boundary
-    geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+    geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
 
     geo.add_boundary(name="top", criteria=lambda x, y: y == 1.0)
     geo.add_boundary(name="down", criteria=lambda x, y: y == 0.0)
@@ -51,13 +51,13 @@ def darcy2d(static=True):
     geo_disc = geo.discretize(npoints=npoints, method="uniform")
 
     # Poisson
-    pde = psci.pde.Poisson(dim=2, rhs=ref_rhs)
+    pde = ppsci.pde.Poisson(dim=2, rhs=ref_rhs)
 
     # set bounday condition
-    bc_top = psci.bc.Dirichlet('u', rhs=ref_sol)
-    bc_down = psci.bc.Dirichlet('u', rhs=ref_sol)
-    bc_left = psci.bc.Dirichlet('u', rhs=ref_sol)
-    bc_right = psci.bc.Dirichlet('u', rhs=ref_sol)
+    bc_top = ppsci.bc.Dirichlet('u', rhs=ref_sol)
+    bc_down = ppsci.bc.Dirichlet('u', rhs=ref_sol)
+    bc_left = ppsci.bc.Dirichlet('u', rhs=ref_sol)
+    bc_right = ppsci.bc.Dirichlet('u', rhs=ref_sol)
 
     # add bounday and boundary condition
     pde.add_bc("top", bc_top)
@@ -70,20 +70,21 @@ def darcy2d(static=True):
 
     # Network
     # TODO: remove num_ins and num_outs
-    net = psci.network.FCNet(
+    net = ppsci.network.FCNet(
         num_ins=2, num_outs=1, num_layers=5, hidden_size=20, activation='tanh')
 
     # Loss
-    loss = psci.loss.L2()
+    loss = ppsci.loss.L2()
 
     # Algorithm
-    algo = psci.algorithm.PINNs(net=net, loss=loss)
+    algo = ppsci.algorithm.PINNs(net=net, loss=loss)
 
     # Optimizer
-    opt = psci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
+    opt = ppsci.optimizer.Adam(
+        learning_rate=0.001, parameters=net.parameters())
 
     # Solver
-    solver = psci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
+    solver = ppsci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
     solution = solver.solve(num_epoch=25)
 
     # MSE

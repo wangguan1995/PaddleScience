@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import pytest
 import numpy as np
 import os
@@ -24,7 +24,7 @@ def test_save_vtk0():
     pde: laplace
     time_array=None
     """
-    geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+    geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y: (y == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=10)
 
@@ -32,7 +32,7 @@ def test_save_vtk0():
     solution = [np.random.rand(l1, 3)]
     for k, v in geo_disc.boundary.items():
         solution.append(np.random.rand(len(v), 3))
-    psci.visu.save_vtk(geo_disc=geo_disc, data=solution)
+    ppsci.visu.save_vtk(geo_disc=geo_disc, data=solution)
     assert os.path.exists("output-t1-p0.vtu")
     os.remove("output-t1-p0.vtu")
 
@@ -43,7 +43,7 @@ def test_save_vtk1():
     pde: laplace
     time_array=list
     """
-    geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+    geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y: (y == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=10)
 
@@ -52,7 +52,8 @@ def test_save_vtk1():
     for k, v in geo_disc.boundary.items():
         solution.append(np.random.rand(len(v), 3))
     time_array = np.arange(10)
-    psci.visu.save_vtk(geo_disc=geo_disc, data=solution, time_array=time_array)
+    ppsci.visu.save_vtk(
+        geo_disc=geo_disc, data=solution, time_array=time_array)
     for i in range(1, len(time_array)):
         assert os.path.exists("output-t%s-p0.vtu" % i)
         os.remove("output-t%s-p0.vtu" % i)

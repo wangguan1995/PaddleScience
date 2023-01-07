@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import sympy
 
 # PDE
 x = sympy.Symbol('x')
 y = sympy.Symbol('y')
 u = sympy.Function('u')(x, y)
-pde = psci.pde.PDE(num_equations=1, time_dependent=False, order=2)
+pde = ppsci.pde.PDE(num_equations=1, time_dependent=False, order=2)
 pde.indvar = [x, y]
 pde.dvar = [u]
 pde.equations[0] = u.diff(x).diff(x) + u.diff(y).diff(y)

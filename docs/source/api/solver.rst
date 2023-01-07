@@ -1,6 +1,6 @@
 Solver
 ========
 
-.. automodule:: paddlescience.solver.solver
+.. automodule:: ppsci.solver.solver
    :members:
    :no-undoc-members:

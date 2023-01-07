@@ -1,7 +1,7 @@
 2D Unsteady Cylinder Flow with Continuous Method
 ===============================================
 
-This guide introduces how to build a PINN model with continuous time method to simulate 2d unsteady flow passing over a cylinder with PaddleScience.
+This guide introduces how to build a PINN model with continuous time method to simulate 2d unsteady flow passing over a cylinder with ppsci.
 
 - **Use case introduction**
 
@@ -17,21 +17,21 @@ The following graphs present the velocity in x and y direction simulated by Open
 .. image:: ../img/2d_unsteady_cylinder.png
 	   :width: 600
 	   :align: center
-	   
+
 - **How to construct a PINN model**
 
     - **Install PaddlePaddle**
 
-    The PaddlePaddle development version need to be installed in this problem. User can choose the appropriate version based on simulating platform (such as in linux os and cuda10.1 platform, 
+    The PaddlePaddle development version need to be installed in this problem. User can choose the appropriate version based on simulating platform (such as in linux os and cuda10.1 platform,
 
     .. code-block::
 
-        python -m pip install paddlepaddle-gpu==0.0.0.post101 -f https://www.paddlepaddle.org.cn/whl/linux/gpu/develop.html` can be used for installing), 
+        python -m pip install paddlepaddle-gpu==0.0.0.post101 -f https://www.paddlepaddle.org.cn/whl/linux/gpu/develop.html` can be used for installing),
 
     More details can refer to `PaddlePaddle <https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/develop/install/pip/linux-pip.html/>`_.
 
     - **Download PaddleScience code**
-    
+
     .. code-block::
 
         git clone https://github.com/PaddlePaddle/PaddleScience.git
@@ -41,30 +41,30 @@ The following graphs present the velocity in x and y direction simulated by Open
     .. code-block::
 
         cd PaddleScience
-        pip install -r requirements 
+        pip install -r requirements
 
     - **Set PYTHONPATH**
-    
+
     .. code-block::
 
         export PYTHONPATH=$PYTHONPATH:/user_path*/PaddleScience/
-   
+
     - **Preparing data** Before running the demo, the OpenFOAM dataset is required, run below script to download data:
-   
+
     .. code-block::
 
         cd examples/cylinder/2d_unsteady_continuous
         python download_dataset.py
 
     - **Training** The trained model is saved under checkpoint path.
-   
+
     .. code-block::
 
         cd examples/cylinder/2d_unsteady_continuous
         python cylinder2d_unsteady_train.py
 
     - **Prediction**
-    
+
     .. code-block::
 
         cd examples/cylinder/2d_unsteady_continuous
@@ -84,7 +84,7 @@ The following graphs present the velocity in x and y direction simulated by Open
 
     .. code-block::
 
-        # Loading data from openfoam 
+        # Loading data from openfoam
         path = './datasets/'
         dataloader = cfd.DataLoader(path=path, N_f=9000, N_b=1000, time_start=1, time_end=50, time_nsteps=50)
         training_time_list = dataloader.select_discretized_time(num_time=30)
@@ -97,9 +97,9 @@ The following graphs present the velocity in x and y direction simulated by Open
         :width: 400
         :align: center
 
-        
+
     The fluid viscosity `nu` represents fluid propery, according to the Reynolds number equation `Re=U*D/nu`, the default inlet velocity is 2, and the Reynolds number can be set through giving different viscosity. In this demo, the default Reynolds number is 100, the cylinder diameter is 1, and the viscosity equals to 0.02.
-        
+
     - **pinn_solver: define respective loss weights**
 
     The loss function consist of weighted eq_loss, bc_loss, ic_loss, outlet_loss and supervised_data_loss. The weight of each loss can be self-defined before training.
@@ -107,8 +107,8 @@ The following graphs present the velocity in x and y direction simulated by Open
     .. code-block::
 
         PINN = psolver.PysicsInformedNeuralNetwork(
-            layers=6, nu=2e-2, bc_weight=10, eq_weight=1, ic_weight=10, supervised_data_weight=10, 
-            outlet_weight=1, training_type='half-supervised', checkpoint_path='./checkpoint/', 
+            layers=6, nu=2e-2, bc_weight=10, eq_weight=1, ic_weight=10, supervised_data_weight=10,
+            outlet_weight=1, training_type='half-supervised', checkpoint_path='./checkpoint/',
             net_params=net_params, distributed_env=distributed_env)
 
     - **pinn_solver: define the neural network**
@@ -118,7 +118,7 @@ The following graphs present the velocity in x and y direction simulated by Open
     .. code-block::
 
         def initialize_NN(self, num_ins=3, num_outs=3, num_layers=10, hidden_size=50):
-            return psci.network.FCNet(
+            return ppsci.network.FCNet(
                 num_ins=num_ins,
                 num_outs=num_outs,
                 num_layers=num_layers,

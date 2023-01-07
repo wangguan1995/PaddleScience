@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import pytest
 import sympy
 
@@ -23,7 +23,7 @@ def jud_laplace(geo_disc, bc, weight=1.):
     """
 
     dim = geo_disc.interior.shape[1]
-    pde = psci.pde.Laplace(dim=dim, weight=weight)
+    pde = ppsci.pde.Laplace(dim=dim, weight=weight)
     for k in geo_disc.boundary.keys():
         pde.add_bc(k, *bc[k])
     pde_disc = pde.discretize(geo_disc=geo_disc)
@@ -58,12 +58,12 @@ def test_laplace0():
     """
     2d
     """
-    geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+    geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y: (y == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=10)
 
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
     jud_laplace(geo_disc, {'top': [bc1, bc2]})
 
 
@@ -72,14 +72,14 @@ def test_laplace1():
     """
     3d
     """
-    geo = psci.geometry.Rectangular(
+    geo = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y, z: (z == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=10)
 
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
-    bc3 = psci.bc.Dirichlet('v', rhs=0)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
+    bc3 = ppsci.bc.Dirichlet('v', rhs=0)
     jud_laplace(geo_disc, {'top': [bc1, bc2, bc3]})
 
 
@@ -89,18 +89,18 @@ def test_laplace2():
     3d
     two bc, set rhs as lambda
     """
-    geo = psci.geometry.Rectangular(
+    geo = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y, z: (z == 1.0))
     geo.add_boundary(name="down", criteria=lambda x, y, z: (z == 0.0))
     geo_disc = geo.discretize(method="uniform", npoints=40)
 
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
-    bc3 = psci.bc.Dirichlet('v', rhs=0)
-    bc4 = psci.bc.Dirichlet('u', rhs=lambda x, y, z: x * y * z)
-    bc5 = psci.bc.Dirichlet('v', rhs=lambda x, y, z: x + y + z)
-    bc6 = psci.bc.Dirichlet('w', rhs=lambda x, y, z: x * y - z)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
+    bc3 = ppsci.bc.Dirichlet('v', rhs=0)
+    bc4 = ppsci.bc.Dirichlet('u', rhs=lambda x, y, z: x * y * z)
+    bc5 = ppsci.bc.Dirichlet('v', rhs=lambda x, y, z: x + y + z)
+    bc6 = ppsci.bc.Dirichlet('w', rhs=lambda x, y, z: x * y - z)
     bc = {'top': [bc1, bc2, bc3], 'down': [bc4, bc5, bc6]}
 
     jud_laplace(geo_disc, bc)
@@ -113,18 +113,18 @@ def test_laplace3():
     two bc, set rhs as lambda
     set Neumann bc
     """
-    geo = psci.geometry.Rectangular(
+    geo = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y, z: (z == 1.0))
     geo.add_boundary(name="down", criteria=lambda x, y, z: (z == 0.0))
     geo_disc = geo.discretize(method="uniform", npoints=40)
 
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Neumann('v', rhs=0)
-    bc3 = psci.bc.Dirichlet('v', rhs=0)
-    bc4 = psci.bc.Neumann('u', rhs=lambda x, y, z: x * y * z)
-    bc5 = psci.bc.Dirichlet('v', rhs=lambda x, y, z: x + y + z)
-    bc6 = psci.bc.Dirichlet('w', rhs=lambda x, y, z: x * y - z)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Neumann('v', rhs=0)
+    bc3 = ppsci.bc.Dirichlet('v', rhs=0)
+    bc4 = ppsci.bc.Neumann('u', rhs=lambda x, y, z: x * y * z)
+    bc5 = ppsci.bc.Dirichlet('v', rhs=lambda x, y, z: x + y + z)
+    bc6 = ppsci.bc.Dirichlet('w', rhs=lambda x, y, z: x * y - z)
     bc = {'top': [bc1, bc2, bc3], 'down': [bc4, bc5, bc6]}
 
     jud_laplace(geo_disc, bc)
@@ -138,18 +138,18 @@ def test_laplace4():
     set Neumann bc
     set Robin bc
     """
-    geo = psci.geometry.Rectangular(
+    geo = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y, z: (z == 1.0))
     geo.add_boundary(name="down", criteria=lambda x, y, z: (z == 0.0))
     geo_disc = geo.discretize(method="uniform", npoints=40)
 
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Neumann('v', rhs=0)
-    bc3 = psci.bc.Robin('v', rhs=0)
-    bc4 = psci.bc.Neumann('u', rhs=lambda x, y, z: x * y * z)
-    bc5 = psci.bc.Robin('v', rhs=lambda x, y, z: x + y + z)
-    bc6 = psci.bc.Dirichlet('w', rhs=lambda x, y, z: x * y - z)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Neumann('v', rhs=0)
+    bc3 = ppsci.bc.Robin('v', rhs=0)
+    bc4 = ppsci.bc.Neumann('u', rhs=lambda x, y, z: x * y * z)
+    bc5 = ppsci.bc.Robin('v', rhs=lambda x, y, z: x + y + z)
+    bc6 = ppsci.bc.Dirichlet('w', rhs=lambda x, y, z: x * y - z)
     bc = {'top': [bc1, bc2, bc3], 'down': [bc4, bc5, bc6]}
 
     jud_laplace(geo_disc, bc)

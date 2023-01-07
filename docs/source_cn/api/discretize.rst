@@ -1,7 +1,7 @@
 离散化
 ===================================
 
-.. autofunction:: paddlescience.discretize
+.. autofunction:: ppsci.discretize
     :no-undoc-member:
 .. py:class:: discretize(pde, geo, time_nsteps=None, space_nsteps=None)
 

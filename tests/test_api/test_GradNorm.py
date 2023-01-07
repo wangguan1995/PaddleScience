@@ -17,7 +17,7 @@ from functools import partial
 
 import numpy as np
 import paddle
-import paddlescience as psci
+import ppsci
 import pytest
 
 from apibase import APIBase
@@ -55,7 +55,7 @@ def cal_gradnorm(ins,
                  activation='tanh',
                  weight_attr=None):
 
-    net = psci.network.FCNet(
+    net = ppsci.network.FCNet(
         num_ins=num_ins,
         num_outs=num_outs,
         num_layers=num_layers,
@@ -66,7 +66,7 @@ def cal_gradnorm(ins,
         net._weights[i] = paddle.ones_like(net._weights[i])
         net._weights[i].stop_gradient = False
 
-    grad_norm = psci.network.GradNorm(
+    grad_norm = ppsci.network.GradNorm(
         net=net, n_loss=n_loss, alpha=alpha, weight_attr=weight_attr)
     res = grad_norm.nn_func(ins)
 

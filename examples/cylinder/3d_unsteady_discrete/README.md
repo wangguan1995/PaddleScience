@@ -4,7 +4,7 @@
 # Flow around a Cylinder
 
 This guide introduces to how to build a PINN model for simulating the flow around a cylinder in PaddleScience.
-In this example, two versions are provided. It is recommended to pay attention to the baseline version first. 
+In this example, two versions are provided. It is recommended to pay attention to the baseline version first.
 If you want higher training speed or want to run on distributed systems, please pay attention to the optimize version.
 
 

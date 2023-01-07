@@ -5,7 +5,7 @@ This guide introduces how to build a simple VIV model with PaddleScience.
 
 - **Use case introduction**
 
-This demo is a typical application of inverse problem,  vortex induced vibrations of bluff bodies occur when the vortex shedding frequency is close to the natural frequency of the structure, the VIV system is equivalent to a one-dimensional spring-damper system: 
+This demo is a typical application of inverse problem,  vortex induced vibrations of bluff bodies occur when the vortex shedding frequency is close to the natural frequency of the structure, the VIV system is equivalent to a one-dimensional spring-damper system:
 
 .. image:: ../img/VIV_1D_SpringDamper.png
 	   :width: 400
@@ -17,8 +17,8 @@ Given the *λ1*, *λ2* and *ρ*, which represent the natural damping, stiffness 
 .. image:: ../img/VIV_eq.png
 	   :width: 200
 	   :align: center
-	   
-The model is based on the assumption that the constant reduction velocity is `Ur=8.5（Ur=u/(fn*d))` corresponding to `Re=500`. The lateral amplitude of cylinder vibration *η* induced by the velocity fluid passing over the cylinder and the corresponding lift force *f* are leveraged as supervised data. 
+
+The model is based on the assumption that the constant reduction velocity is `Ur=8.5（Ur=u/(fn*d))` corresponding to `Re=500`. The lateral amplitude of cylinder vibration *η* induced by the velocity fluid passing over the cylinder and the corresponding lift force *f* are leveraged as supervised data.
 
 To verify the function of PINNs algorithm for solving such classical inverse problem, the ground truth of stiffness and damping of the system are fixed previously（*λ1=0，λ2=1.093*）. After training properly, we achieve the relative error lower than 5%, through comparing the value of stiffness and damping predicted from PINN and the ground truth,  which inidicates that the trained model can well simulate the one-dimensional vibration phenomenon of VIV and can predict the physical properties of unknown complicated structure.
 
@@ -26,16 +26,16 @@ To verify the function of PINNs algorithm for solving such classical inverse pro
 
     - **Install PaddlePaddle**
 
-    The PaddlePaddle development version need to be installed in this problem. User can choose the appropriate version based on simulating platform (such as in linux os and cuda10.1 platform, 
+    The PaddlePaddle development version need to be installed in this problem. User can choose the appropriate version based on simulating platform (such as in linux os and cuda10.1 platform,
 
     .. code-block::
 
-        python -m pip install paddlepaddle-gpu==0.0.0.post101 -f https://www.paddlepaddle.org.cn/whl/linux/gpu/develop.html` can be used for installing), 
+        python -m pip install paddlepaddle-gpu==0.0.0.post101 -f https://www.paddlepaddle.org.cn/whl/linux/gpu/develop.html` can be used for installing),
 
     More details can refer to `PaddlePaddle <https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/develop/install/pip/linux-pip.html/>`_.
 
     - **Download PaddleScience code**
-    
+
     .. code-block::
 
         git clone https://github.com/PaddlePaddle/PaddleScience.git
@@ -45,23 +45,23 @@ To verify the function of PINNs algorithm for solving such classical inverse pro
     .. code-block::
 
         cd PaddleScience
-        pip install -r requirements 
+        pip install -r requirements
 
     - **Set PYTHONPATH**
-    
+
     .. code-block::
 
         export PYTHONPATH=$PYTHONPATH:/user_path*/PaddleScience/
-   
+
     - **Training** The trained model is saved under checkpoint path.
-   
+
     .. code-block::
 
         cd examples/fsi/
         python viv_inverse_train.py
 
     - **Prediction**
-    
+
     .. code-block::
 
         cd examples/fsi/
@@ -87,9 +87,9 @@ To verify the function of PINNs algorithm for solving such classical inverse pro
 
     .. code-block::
 
-        PINN = psolver.PysicsInformedNeuralNetwork(layers=6, 
-            hidden_size=30, num_ins=1, num_outs=1, 
-            t_max=tmax, t_min=tmin, N_f=f.shape[0], checkpoint_path='./checkpoint/', 
+        PINN = psolver.PysicsInformedNeuralNetwork(layers=6,
+            hidden_size=30, num_ins=1, num_outs=1,
+            t_max=tmax, t_min=tmin, N_f=f.shape[0], checkpoint_path='./checkpoint/',
             net_params=net_params)
 
 
@@ -129,12 +129,12 @@ To verify the function of PINNs algorithm for solving such classical inverse pro
         scheduler = paddle.optimizer.lr.StepDecay(learning_rate=1e-3, step_size=20000, gamma=0.9)
         adm_opt = paddle.optimizer.Adam(scheduler, weight_decay=None,parameters=PINN.net.parameters())
         PINN.train(num_epoch=100000, batchsize=batchsize, optimizer=adm_opt, scheduler=scheduler)
-        adm_opt = psci.optimizer.Adam(learning_rate=1e-5, weight_decay=None,parameters=PINN.net.parameters())
+        adm_opt = ppsci.optimizer.Adam(learning_rate=1e-5, weight_decay=None,parameters=PINN.net.parameters())
         PINN.train(num_epoch=100000, batchsize=batchsize, optimizer=adm_opt)
 
     - **Prediction**
 
-    After training, the model is saved in the checkpoint foler, set `net_params` and execute `python viv_inverse_predict.py` to get predictions. 
+    After training, the model is saved in the checkpoint foler, set `net_params` and execute `python viv_inverse_predict.py` to get predictions.
 
     .. code-block::
 

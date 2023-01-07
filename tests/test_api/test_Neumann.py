@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import sympy
 import pytest
 
@@ -24,7 +24,7 @@ def test_Neumann0():
     """
     indvar = sympy.symbols('x y')
     n = sympy.Symbol('n')
-    bc_v = psci.bc.Neumann('v', rhs=0.0)
+    bc_v = ppsci.bc.Neumann('v', rhs=0.0)
     r = bc_v.discretize(indvar)
     eq = sympy.Function('v')(*indvar)
     fo = sympy.Derivative(eq, n)
@@ -38,7 +38,7 @@ def test_Neumann1():
     """
     indvar = sympy.symbols('t x y z')
     n = sympy.Symbol('n')
-    bc_u = psci.bc.Neumann('u', rhs=lambda x, y, z: x * y * z)
+    bc_u = ppsci.bc.Neumann('u', rhs=lambda x, y, z: x * y * z)
     r = bc_u.discretize(indvar)
     eq = sympy.Function('u')(*indvar)
     fo = sympy.Derivative(eq, n)
@@ -52,7 +52,7 @@ def test_Neumann2():
     """
     indvar = sympy.symbols('t x y z')
     n = sympy.Symbol('n')
-    bc_u = psci.bc.Neumann('u', rhs=lambda x, y, z: x * y * z, weight=0.5)
+    bc_u = ppsci.bc.Neumann('u', rhs=lambda x, y, z: x * y * z, weight=0.5)
     r = bc_u.discretize(indvar)
     eq = sympy.Function('u')(*indvar)
     fo = sympy.Derivative(eq, n)

@@ -25,12 +25,12 @@ import matplotlib.pyplot as plt
 
 import paddle
 import paddle.nn as nn
-import paddlescience as psci
+import ppsci
 import paddle.distributed as dist
 
 from dataset import Dataset
 
-import paddlescience.module.fsi.viv_pinn_solver as psolver
+import ppsci.module.fsi.viv_pinn_solver as psolver
 
 np.random.seed(1234)
 

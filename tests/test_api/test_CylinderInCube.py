@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import pytest
 """
 test_CylinderInCube
@@ -26,7 +26,7 @@ def test_CylinderInCube0():
     """
     cc = (1.0, 0.0)
     cr = 0.5
-    geo = psci.geometry.CylinderInCube(
+    geo = ppsci.geometry.CylinderInCube(
         origin=(-8, -8, -0.5),
         extent=(25, 8, 0.5),
         circle_center=cc,
@@ -57,7 +57,7 @@ def test_CylinderInCube1():
     """
     cc = (0.0, 0.0)
     cr = 0.5
-    geo = psci.geometry.CylinderInCube(
+    geo = ppsci.geometry.CylinderInCube(
         origin=(-8, -8, -0.5),
         extent=(25, 8, 0.5),
         circle_center=cc,

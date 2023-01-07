@@ -1,7 +1,7 @@
 优化器
 =========
 
-.. automodule:: paddlescience.optimizer.optimizer
+.. automodule:: ppsci.optimizer.optimizer
 
 .. py:class:: Adam(**kargs)
 
@@ -35,4 +35,4 @@
    .. code-block::
 
       import paddlescience as psci
-      opt = psci.optimizer.Adam(learning_rate=0.1, parameters=linear.parameters())
+      opt = ppsci.optimizer.Adam(learning_rate=0.1, parameters=linear.parameters())

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import numpy as np
 import paddle
 
@@ -57,25 +57,25 @@ inputsup = np.stack((sup_t, sup_x, sup_y), axis=1)
 refsup = np.stack((sup_p, sup_u, sup_v), axis=1)
 
 # N-S
-pde = psci.pde.NavierStokes(nu=0.02, rho=1.0, dim=2, time_dependent=True)
+pde = ppsci.pde.NavierStokes(nu=0.02, rho=1.0, dim=2, time_dependent=True)
 
 # set bounday condition
-bc_inlet_u = psci.bc.Dirichlet('u', rhs=b_inlet_u)
-bc_inlet_v = psci.bc.Dirichlet('v', rhs=b_inlet_v)
-bc_outlet_p = psci.bc.Dirichlet('p', rhs=b_outlet_p)
+bc_inlet_u = ppsci.bc.Dirichlet('u', rhs=b_inlet_u)
+bc_inlet_v = ppsci.bc.Dirichlet('v', rhs=b_inlet_v)
+bc_outlet_p = ppsci.bc.Dirichlet('p', rhs=b_outlet_p)
 
 # add bounday and boundary condition
 pde.set_bc("inlet", bc_inlet_u, bc_inlet_v)
 pde.set_bc("outlet", bc_outlet_p)
 
 # add initial condition
-ic_u = psci.ic.IC('u', rhs=init_u)
-ic_v = psci.ic.IC('v', rhs=init_v)
-ic_p = psci.ic.IC('p', rhs=init_p)
+ic_u = ppsci.ic.IC('u', rhs=init_u)
+ic_v = ppsci.ic.IC('v', rhs=init_v)
+ic_p = ppsci.ic.IC('p', rhs=init_p)
 pde.set_ic(ic_u, ic_v, ic_p)
 
 # Network
-net = psci.network.FCNet(
+net = ppsci.network.FCNet(
     num_ins=3, num_outs=3, num_layers=6, hidden_size=50, activation='tanh')
 net.initialize(path='./checkpoint/pretrained_net_params')
 
@@ -86,28 +86,28 @@ outic = net(inputic)
 outsup = net(inputsup)
 
 # eq loss
-losseq1 = psci.loss.EqLoss(pde.equations[0], netout=outeq)
-losseq2 = psci.loss.EqLoss(pde.equations[1], netout=outeq)
-losseq3 = psci.loss.EqLoss(pde.equations[2], netout=outeq)
+losseq1 = ppsci.loss.EqLoss(pde.equations[0], netout=outeq)
+losseq2 = ppsci.loss.EqLoss(pde.equations[1], netout=outeq)
+losseq3 = ppsci.loss.EqLoss(pde.equations[2], netout=outeq)
 # bc loss
-lossbc1 = psci.loss.BcLoss("inlet", netout=outbc1)
-lossbc2 = psci.loss.BcLoss("outlet", netout=outbc2)
+lossbc1 = ppsci.loss.BcLoss("inlet", netout=outbc1)
+lossbc2 = ppsci.loss.BcLoss("outlet", netout=outbc2)
 # ic loss
-lossic = psci.loss.IcLoss(netout=outic)
+lossic = ppsci.loss.IcLoss(netout=outic)
 # supervise loss
-losssup = psci.loss.DataLoss(netout=outsup, ref=refsup)
+losssup = ppsci.loss.DataLoss(netout=outsup, ref=refsup)
 
 # total loss
 loss = losseq1 + losseq2 + losseq3 + 10.0 * lossbc1 + lossbc2 + 10.0 * lossic + 10.0 * losssup
 
 # Algorithm
-algo = psci.algorithm.PINNs(net=net, loss=loss)
+algo = ppsci.algorithm.PINNs(net=net, loss=loss)
 
 # Optimizer
-opt = psci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
+opt = ppsci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
 
 # Solver
-solver = psci.solver.Solver(pde=pde, algo=algo, opt=opt)
+solver = ppsci.solver.Solver(pde=pde, algo=algo, opt=opt)
 
 # Solve
 solution = solver.solve(num_epoch=10)
@@ -116,4 +116,4 @@ solution = solver.solve(num_epoch=10)
 n = int(i_x.shape[0] / len(time_array))
 cord = np.stack(
     (i_x[0:n].astype("float32"), i_y[0:n].astype("float32")), axis=1)
-psci.visu.__save_vtk_raw(cordinate=cord, data=solution[0][-n::])
+ppsci.visu.__save_vtk_raw(cordinate=cord, data=solution[0][-n::])

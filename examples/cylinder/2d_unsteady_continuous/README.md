@@ -103,7 +103,7 @@ Basically, the model is composed with 4 main parts: dataloader, pinn_solver, tra
    The fully connected neural network is used by default.
 
         def initialize_NN(self, num_ins=3, num_outs=3, num_layers=10, hidden_size=50):
-        return psci.network.FCNet(
+        return ppsci.network.FCNet(
             num_ins=num_ins,
             num_outs=num_outs,
             num_layers=num_layers,

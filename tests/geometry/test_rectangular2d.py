@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import numpy as np
 
-geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
 
 geo_disc = geo.discretize(method="uniform", npoints=(3, 6))
 geo_disc = geo.discretize(method="uniform", npoints=25)

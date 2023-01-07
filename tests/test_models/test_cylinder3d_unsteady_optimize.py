@@ -14,12 +14,12 @@
 
 import numpy as np
 import os
-import paddlescience as psci
+import ppsci
 import paddle
 import os
 import wget
 import zipfile
-from paddlescience.solver.utils import l2_norm_square, compute_bc_loss, compute_eq_loss, compile_and_convert_back_to_program, create_inputs_var, create_labels_var, convert_to_distributed_program, data_parallel_partition
+from ppsci.solver.utils import l2_norm_square, compute_bc_loss, compute_eq_loss, compile_and_convert_back_to_program, create_inputs_var, create_labels_var, convert_to_distributed_program, data_parallel_partition
 import pytest
 import sys
 
@@ -28,8 +28,8 @@ def run():
     paddle.seed(1)
     np.random.seed(1)
 
-    psci.config.enable_static()
-    psci.config.enable_prim()
+    ppsci.config.enable_static()
+    ppsci.config.enable_prim()
 
     # define start time and time step
     start_time = 100
@@ -56,7 +56,7 @@ def run():
 
     cc = (0.0, 0.0)
     cr = 0.5
-    geo = psci.geometry.CylinderInCube(
+    geo = ppsci.geometry.CylinderInCube(
         origin=(-8, -8, -2),
         extent=(25, 8, 2),
         circle_center=cc,
@@ -77,7 +77,7 @@ def run():
     geo_disc.user = GetRealPhyInfo(start_time, need_info='cord')
 
     # N-S equation
-    pde = psci.pde.NavierStokes(
+    pde = ppsci.pde.NavierStokes(
         nu=0.01,
         rho=1.0,
         dim=3,
@@ -87,17 +87,17 @@ def run():
     pde.set_time_interval([100.0, 110.0])
 
     # boundary condition on left side: u=10, v=w=0
-    bc_left_u = psci.bc.Dirichlet('u', rhs=1.0, weight=1.0)
-    bc_left_v = psci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
-    bc_left_w = psci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
+    bc_left_u = ppsci.bc.Dirichlet('u', rhs=1.0, weight=1.0)
+    bc_left_v = ppsci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
+    bc_left_w = ppsci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
 
     # boundary condition on right side: p=0
-    bc_right_p = psci.bc.Dirichlet('p', rhs=0.0, weight=1.0)
+    bc_right_p = ppsci.bc.Dirichlet('p', rhs=0.0, weight=1.0)
 
     # boundary on circle
-    bc_circle_u = psci.bc.Dirichlet('u', rhs=0.0, weight=1.0)
-    bc_circle_v = psci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
-    bc_circle_w = psci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
+    bc_circle_u = ppsci.bc.Dirichlet('u', rhs=0.0, weight=1.0)
+    bc_circle_v = ppsci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
+    bc_circle_w = ppsci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
 
     # add bounday and boundary condition
     pde.add_bc("left", bc_left_u, bc_left_v, bc_left_w)
@@ -109,7 +109,7 @@ def run():
         time_method="implicit", time_step=1, geo_disc=geo_disc)
 
     # declare network
-    net = psci.network.FCNet(
+    net = ppsci.network.FCNet(
         num_ins=3,
         num_outs=4,
         num_layers=10,
@@ -117,7 +117,7 @@ def run():
         activation='tanh')
 
     # Algorithm
-    algo = psci.algorithm.PINNs(net=net, loss=None)
+    algo = ppsci.algorithm.PINNs(net=net, loss=None)
 
     # Get data shape
     npoints = len(pde_disc.geometry.interior)
@@ -166,8 +166,8 @@ def run():
             main_program, startup_program, param_grads)
 
     with paddle.static.program_guard(main_program, startup_program):
-        if psci.config.prim_enabled():
-            psci.config.prim2orig(main_program.block(0))
+        if ppsci.config.prim_enabled():
+            ppsci.config.prim2orig(main_program.block(0))
 
     gpu_id = int(os.environ.get('FLAGS_selected_gpus', 0))
     place = paddle.CUDAPlace(gpu_id)

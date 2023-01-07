@@ -102,7 +102,7 @@ Basically, the model is composed with 4 main parts: dataloader, pinn_solver, tra
     scheduler = paddle.optimizer.lr.StepDecay(learning_rate=1e-3, step_size=20000, gamma=0.9)
     adm_opt = paddle.optimizer.Adam(scheduler, weight_decay=None,parameters=PINN.net.parameters())
     PINN.train(num_epoch=100000, batchsize=batchsize, optimizer=adm_opt, scheduler=scheduler)
-    adm_opt = psci.optimizer.Adam(learning_rate=1e-5, weight_decay=None,parameters=PINN.net.parameters())
+    adm_opt = ppsci.optimizer.Adam(learning_rate=1e-5, weight_decay=None,parameters=PINN.net.parameters())
     PINN.train(num_epoch=100000, batchsize=batchsize, optimizer=adm_opt)
     ```
 

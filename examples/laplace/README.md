@@ -39,12 +39,12 @@ Laplace2d example.
 
 ### Constructing Geometry
 
-First, define the problem geometry using the `psci.geometry` module interface. In this example,
+First, define the problem geometry using the `ppsci.geometry` module interface. In this example,
 the geometry is a rectangle with the origin at coordinates (0.0, 0.0) and the extent set
 to (1.0, 1.0).
 
 ```
-geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
 ```
 
 Next, add boundaries to the geometry, these boundaries will be used in PDE. 
@@ -68,10 +68,10 @@ geo_disc = geo.discretize(npoints=npoints, method="uniform")
 
 After defining Geometry part, define the PDE equations to solve. In this example, the equations are a 2d
 Laplace. This equation is present in the package, and one only needs to
-create a `psci.pde.Laplace` object to set up the equation.
+create a `ppsci.pde.Laplace` object to set up the equation.
 
 ```
-pde = psci.pde.Laplace(dim=2)
+pde = ppsci.pde.Laplace(dim=2)
 ```
 
 Next, add boundaries equations for PDE. 
@@ -80,7 +80,7 @@ The physical information on the  boundaries needs to be set and then added using
 
 
 ```
-bc_around = psci.bc.Dirichlet('u', rhs=ref_sol)
+bc_around = ppsci.bc.Dirichlet('u', rhs=ref_sol)
 
 pde.add_bc("around", bc_around)
 ```
@@ -96,12 +96,12 @@ pde_disc = pde.discretize(geo_disc=geo_disc)
 ### Constructing the neural net
 
 Now the PDE part is almost done, we move on to constructing the neural net.
-It's straightforward to define a fully connected network by creating a `psci.network.FCNet` object.
+It's straightforward to define a fully connected network by creating a `ppsci.network.FCNet` object.
 Following is how we create an FFN of 5 hidden layers with 20 neurons on each, using hyperbolic
 tangent as the activation function.
 
 ```
-net = psci.network.FCNet(
+net = ppsci.network.FCNet(
     num_ins=2, num_outs=1, num_layers=5, hidden_size=20, activation='tanh')
 ```
 
@@ -109,30 +109,30 @@ Next, one of the most important steps is define the loss function. Here we use L
 
 
 ```
-loss = psci.loss.L2()
+loss = ppsci.loss.L2()
 ```
 
 By design, the `loss` object conveys complete information of the PDE and hence the
 latter is eclipsed in further steps. Now combine the neural net and the loss and we
-create the `psci.algorithm.PINNs` model algorithm.
+create the `ppsci.algorithm.PINNs` model algorithm.
 
 ```
-algo = psci.algorithm.PINNs(net=net, loss=loss)
+algo = ppsci.algorithm.PINNs(net=net, loss=loss)
 ```
 
 Next, by plugging in an Adam optimizer, a solver is contructed and you are ready
 to kick off training. In this example, the Adam optimizer is used and is given
 a learning rate of 0.001. 
 
-The `psci.solver.Solver` class bundles the PINNs model, which is called `algo` here,
+The `ppsci.solver.Solver` class bundles the PINNs model, which is called `algo` here,
 and the optimizer, into a solver object that exposes the `solve` interface.
 `solver.solve` accepts three key word arguments. `num_epoch` specicifies how many
 epoches for each batch. 
 
 
 ```
-opt = psci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
-solver = psci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
+opt = ppsci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
+solver = ppsci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
 solution = solver.solve(num_epoch=10000)
 ```
 
@@ -140,11 +140,11 @@ Finally, `solver.solve` returns a function that calculates the solution value
 for given points in the geometry. Apply the function to the geometry, convert the
 outputs to Numpy and then you can verify the results. 
 
-`psci.visu.save_vtk` is a helper utility for quick visualization. It saves
+`ppsci.visu.save_vtk` is a helper utility for quick visualization. It saves
 the graphs in vtp file which one can play using [Paraview](https://www.paraview.org/).
 
 ```
-psci.visu.save_vtk(geo_disc=pde_disc.geometry, data=solution)
+ppsci.visu.save_vtk(geo_disc=pde_disc.geometry, data=solution)
 ```
 
 ### Scalability on Distributed computing

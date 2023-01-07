@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import sympy
 import numpy as np
 import pytest
@@ -24,7 +24,7 @@ def test_ic0():
     test0
     """
     indvar = sympy.symbols('x y')
-    ic_v = psci.ic.IC('v', rhs=0.0)
+    ic_v = ppsci.ic.IC('v', rhs=0.0)
     r = ic_v.discretize(indvar)
     eq = sympy.Function('v')(*indvar)
     assert r.formula == eq
@@ -36,7 +36,7 @@ def test_ic1():
     test1
     """
     indvar = sympy.symbols('t x y z')
-    ic_u = psci.ic.IC('u', rhs=lambda x, y, z: x * y * z)
+    ic_u = ppsci.ic.IC('u', rhs=lambda x, y, z: x * y * z)
     r = ic_u.discretize(indvar)
     eq = sympy.Function('u')(*indvar)
     assert r.formula == eq

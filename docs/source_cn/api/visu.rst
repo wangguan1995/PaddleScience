@@ -1,7 +1,7 @@
 可视化
 =============
 
-.. automodule:: paddlescience.visu.visu_vtk
+.. automodule:: ppsci.visu.visu_vtk
 
 .. py:function:: save_vtk(geo, data, filename='output')
 
@@ -17,4 +17,4 @@
    .. code-block::
 
       import paddlescience as psci
-      pde = psci.visu.save_vtk(geo, data, filename="output")
+      pde = ppsci.visu.save_vtk(geo, data, filename="output")

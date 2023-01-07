@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import numpy as np
 import paddle
 import pytest
@@ -30,7 +30,8 @@ def ldc2d_unsteady_t(static=True):
         paddle.enable_static()
 
     # set geometry and boundary
-    geo = psci.geometry.Rectangular(origin=(-0.05, -0.05), extent=(0.05, 0.05))
+    geo = ppsci.geometry.Rectangular(
+        origin=(-0.05, -0.05), extent=(0.05, 0.05))
 
     geo.add_boundary(name="top", criteria=lambda x, y: abs(y - 0.05) < 1e-5)
     geo.add_boundary(name="down", criteria=lambda x, y: abs(y + 0.05) < 1e-5)
@@ -42,20 +43,20 @@ def ldc2d_unsteady_t(static=True):
     geo_disc = geo.discretize(npoints=npoints, method="uniform")
 
     # N-S
-    pde = psci.pde.NavierStokes(
+    pde = ppsci.pde.NavierStokes(
         nu=0.01, rho=1.0, dim=2, time_dependent=True, weight=0.0001)
     pde.set_time_interval([0.0, 0.5])
 
     # set bounday condition
     weight_top_u = lambda x, y: 1.0 - 20.0 * abs(x)
-    bc_top_u = psci.bc.Dirichlet('u', rhs=1.0, weight=weight_top_u)
-    bc_top_v = psci.bc.Dirichlet('v', rhs=0.0)
-    bc_down_u = psci.bc.Dirichlet('u', rhs=0.0)
-    bc_down_v = psci.bc.Dirichlet('v', rhs=0.0)
-    bc_left_u = psci.bc.Dirichlet('u', rhs=0.0)
-    bc_left_v = psci.bc.Dirichlet('v', rhs=0.0)
-    bc_right_u = psci.bc.Dirichlet('u', rhs=0.0)
-    bc_right_v = psci.bc.Dirichlet('v', rhs=0.0)
+    bc_top_u = ppsci.bc.Dirichlet('u', rhs=1.0, weight=weight_top_u)
+    bc_top_v = ppsci.bc.Dirichlet('v', rhs=0.0)
+    bc_down_u = ppsci.bc.Dirichlet('u', rhs=0.0)
+    bc_down_v = ppsci.bc.Dirichlet('v', rhs=0.0)
+    bc_left_u = ppsci.bc.Dirichlet('u', rhs=0.0)
+    bc_left_v = ppsci.bc.Dirichlet('v', rhs=0.0)
+    bc_right_u = ppsci.bc.Dirichlet('u', rhs=0.0)
+    bc_right_v = ppsci.bc.Dirichlet('v', rhs=0.0)
 
     # add bounday and boundary condition
     pde.add_bc("top", bc_top_u, bc_top_v)
@@ -64,8 +65,8 @@ def ldc2d_unsteady_t(static=True):
     pde.add_bc("right", bc_right_u, bc_right_v)
 
     # add initial condition
-    ic_u = psci.ic.IC('u', rhs=0.0)
-    ic_v = psci.ic.IC('v', rhs=0.0)
+    ic_u = ppsci.ic.IC('u', rhs=0.0)
+    ic_v = ppsci.ic.IC('v', rhs=0.0)
     pde.add_ic(ic_u, ic_v)
 
     # discretization pde
@@ -73,7 +74,7 @@ def ldc2d_unsteady_t(static=True):
 
     # Network
     # TODO: remove num_ins and num_outs
-    net = psci.network.FCNet(
+    net = ppsci.network.FCNet(
         num_ins=3,
         num_outs=3,
         num_layers=10,
@@ -81,16 +82,17 @@ def ldc2d_unsteady_t(static=True):
         activation='tanh')
 
     # Loss
-    loss = psci.loss.L2(p=2)
+    loss = ppsci.loss.L2(p=2)
 
     # Algorithm
-    algo = psci.algorithm.PINNs(net=net, loss=loss)
+    algo = ppsci.algorithm.PINNs(net=net, loss=loss)
 
     # Optimizer
-    opt = psci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
+    opt = ppsci.optimizer.Adam(
+        learning_rate=0.001, parameters=net.parameters())
 
     # Solver
-    solver = psci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
+    solver = ppsci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
     solution = solver.solve(num_epoch=25)
 
     return solution

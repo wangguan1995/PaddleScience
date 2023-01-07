@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import pytest
 """
 test_CircleInRectangular
@@ -24,7 +24,7 @@ def test_CircleInRectangular0():
     """
     set rectangular boundary
     """
-    geo = psci.geometry.CircleInRectangular(
+    geo = ppsci.geometry.CircleInRectangular(
         origin=(0.0, 0.0),
         extent=(1.0, 1.0),
         circle_center=(0.5, 0.5),
@@ -53,7 +53,7 @@ def test_CircleInRectangular1():
     set rectangular boundary
     set circle boundary
     """
-    geo = psci.geometry.CircleInRectangular(
+    geo = ppsci.geometry.CircleInRectangular(
         origin=(0.0, 0.0),
         extent=(1.0, 1.0),
         circle_center=(0.5, 0.5),

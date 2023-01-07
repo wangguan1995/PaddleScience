@@ -1,7 +1,7 @@
 PDE (偏微分方程)
 ===================================
 
-.. automodule:: paddlescience.pde.pde_laplace_2d
+.. automodule:: ppsci.pde.pde_laplace_2d
    
 .. py:class:: Laplace2D 
 
@@ -16,7 +16,7 @@ PDE (偏微分方程)
    .. code-block:: 
 
       import paddlescience as psci
-      pde = psci.pde.Laplace2D()
+      pde = ppsci.pde.Laplace2D()
 
    .. py:function:: set_bc_value(bc_value, bc_check_dim=None)
 
@@ -27,7 +27,7 @@ PDE (偏微分方程)
          - **bc_value** - 数组。
          - **bc_check_dim** (list) - 可选项，默认为None。如果不是None，该列表必须包含要设置边界条件值的维度。如果是None，则会在网络输出的所有维度设置边界条件值。
 
-.. automodule:: paddlescience.pde.pde_navier_stokes
+.. automodule:: ppsci.pde.pde_navier_stokes
 
 .. py:class:: NavierStokes(nu=0.01, rho=1.0) 
    
@@ -52,7 +52,7 @@ PDE (偏微分方程)
    .. code-block:: python
 
       import paddlescience as psci
-      pde = psci.pde.NavierStokes(0.01, 1.0)
+      pde = ppsci.pde.NavierStokes(0.01, 1.0)
 
    .. py:function:: set_bc_value(bc_value, bc_check_dim=None)
 

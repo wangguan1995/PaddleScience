@@ -22,12 +22,12 @@ import time
 import numpy as np
 
 import paddle
-import paddlescience as psci
+import ppsci
 import paddle.distributed as dist
 from pyevtk.hl import pointsToVTK
 
 import loading_cfd_data as cfd
-import paddlescience.module.cfd.pinn_solver as psolver
+import ppsci.module.cfd.pinn_solver as psolver
 
 
 def predict(net_params=None, vtk_filename='./vtk/uvp_t_'):

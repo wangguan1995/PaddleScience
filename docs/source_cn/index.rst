@@ -42,15 +42,15 @@ PaddleScience目前正在积极开发中。其设计和API也在不断发展演�
    :maxdepth: 2
    :caption: API参考
 
-   paddlescience.pde <api/pde>
-   paddlescience.geometry <api/geometry>
-   paddlescience.discretize <api/discretize>
-   paddlescience.network <api/network>
-   paddlescience.loss <api/loss>
-   paddlescience.algorithm <api/algorithm>
-   paddlescience.optimizer <api/optimizer>
-   paddlescience.solver <api/solver>
-   paddlescience.visu <api/visu>
+   ppsci.pde <api/pde>
+   ppsci.geometry <api/geometry>
+   ppsci.discretize <api/discretize>
+   ppsci.network <api/network>
+   ppsci.loss <api/loss>
+   ppsci.algorithm <api/algorithm>
+   ppsci.optimizer <api/optimizer>
+   ppsci.solver <api/solver>
+   ppsci.visu <api/visu>
 
 .. toctree::
    :maxdepth: 2

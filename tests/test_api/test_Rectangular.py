@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import pytest
 """
 test_rectangular
@@ -25,7 +25,7 @@ def test_rectangular0():
     2d
     discretize_method="uniform"
     """
-    geo2d = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+    geo2d = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
     geo2d.add_boundary("top", criteria=lambda x, y: y == 1.0)
     geo2d.add_boundary("down", criteria=lambda x, y: y == 0.0)
     geo_disc = geo2d.discretize(method="uniform", npoints=10)
@@ -45,7 +45,7 @@ def test_rectangular1():
     2d
     discretize_method="sampling"
     """
-    geo2d = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(2.0, 1.0))
+    geo2d = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(2.0, 1.0))
     geo2d.add_boundary("top", criteria=lambda x, y: y == 1.0)
     geo2d.add_boundary("down", criteria=lambda x, y: y == 0.0)
     geo2d.add_boundary("left", criteria=lambda x, y: x == 0.0)
@@ -68,7 +68,7 @@ def test_rectangular2():
     discretize_method="uniform"
     npoints: sequence
     """
-    geo3d = psci.geometry.Rectangular(
+    geo3d = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 2.0, 4.0))
     geo3d.add_boundary("top", criteria=lambda x, y, z: z == 4.0)
     geo3d.add_boundary("down", criteria=lambda x, y, z: z == 0.0)
@@ -89,7 +89,7 @@ def test_rectangular3():
     3d
     discretize_method="sampling"
     """
-    geo3d = psci.geometry.Rectangular(
+    geo3d = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 1.0, 1.0))
     geo3d.add_boundary("top", criteria=lambda x, y, z: z == 1.0)
     geo3d.add_boundary("down", criteria=lambda x, y, z: z == 0.0)

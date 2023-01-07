@@ -1,7 +1,7 @@
 神经网络
 ===================================
 
-.. automodule:: paddlescience.network.network_fc
+.. automodule:: ppsci.network.network_fc
 
 .. py:class:: FCNet(num_ins, num_outs, num_layers, hidden_size, dtype='float32', activation='tanh')
 
@@ -22,5 +22,5 @@
    .. code-block:: python
 
       import paddlescience as psci
-      net = psci.network.FCNet(2, 3, 10, 50, dtype='float32', activiation='tanh')
+      net = ppsci.network.FCNet(2, 3, 10, 50, dtype='float32', activiation='tanh')
 

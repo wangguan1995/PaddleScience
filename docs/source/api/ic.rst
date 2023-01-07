@@ -1,6 +1,6 @@
 Initial condition
 ==================
 
-.. automodule:: paddlescience.ic.ic
+.. automodule:: ppsci.ic.ic
    :members:
    :no-undoc-members:

@@ -14,7 +14,7 @@
 # limitations under the License.
 """
 import numpy as np
-import paddlescience as psci
+import ppsci
 import pytest
 import paddle
 from apibase import APIBase
@@ -23,7 +23,7 @@ from apibase import randtool
 np.random.seed(22)
 paddle.seed(22)
 paddle.disable_static()
-psci.config.set_dtype('float64')
+ppsci.config.set_dtype('float64')
 
 
 def cal_FCNet(ins,
@@ -35,7 +35,7 @@ def cal_FCNet(ins,
     """
     calculate FCNet api
     """
-    net = psci.network.FCNet(
+    net = ppsci.network.FCNet(
         num_ins=num_ins,
         num_outs=num_outs,
         num_layers=num_layers,
@@ -255,7 +255,7 @@ def static_fcnet(ins,
                  num_layers,
                  hidden_size,
                  activation='tanh'):
-    net = psci.network.FCNet(
+    net = ppsci.network.FCNet(
         num_ins, num_outs, num_layers, hidden_size, activation=activation)
     net.make_network()
     for i in range(num_layers):

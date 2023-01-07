@@ -14,7 +14,7 @@
 
 # discrete time method
 
-import paddlescience as psci
+import ppsci
 import numpy as np
 import paddle
 import os
@@ -58,7 +58,7 @@ def cylinder3d_unsteady(static=True):
 
     cc = (0.0, 0.0)
     cr = 0.5
-    geo = psci.geometry.CylinderInCube(
+    geo = ppsci.geometry.CylinderInCube(
         origin=(-8, -8, -2),
         extent=(25, 8, 2),
         circle_center=cc,
@@ -79,7 +79,7 @@ def cylinder3d_unsteady(static=True):
     geo_disc.user = GetRealPhyInfo(start_time, need_info='cord')
 
     # N-S equation
-    pde = psci.pde.NavierStokes(
+    pde = ppsci.pde.NavierStokes(
         nu=0.01,
         rho=1.0,
         dim=3,
@@ -89,17 +89,17 @@ def cylinder3d_unsteady(static=True):
     pde.set_time_interval([100.0, 110.0])
 
     # boundary condition on left side: u=1, v=w=0
-    bc_left_u = psci.bc.Dirichlet('u', rhs=1.0, weight=1.0)
-    bc_left_v = psci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
-    bc_left_w = psci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
+    bc_left_u = ppsci.bc.Dirichlet('u', rhs=1.0, weight=1.0)
+    bc_left_v = ppsci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
+    bc_left_w = ppsci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
 
     # boundary condition on right side: p=0
-    bc_right_p = psci.bc.Dirichlet('p', rhs=0.0, weight=1.0)
+    bc_right_p = ppsci.bc.Dirichlet('p', rhs=0.0, weight=1.0)
 
     # boundary on circle
-    bc_circle_u = psci.bc.Dirichlet('u', rhs=0.0, weight=1.0)
-    bc_circle_v = psci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
-    bc_circle_w = psci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
+    bc_circle_u = ppsci.bc.Dirichlet('u', rhs=0.0, weight=1.0)
+    bc_circle_v = ppsci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
+    bc_circle_w = ppsci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
 
     # add bounday and boundary condition
     pde.add_bc("left", bc_left_u, bc_left_v, bc_left_w)
@@ -111,7 +111,7 @@ def cylinder3d_unsteady(static=True):
         time_method="implicit", time_step=1, geo_disc=geo_disc)
 
     # Network
-    net = psci.network.FCNet(
+    net = ppsci.network.FCNet(
         num_ins=3,
         num_outs=4,
         num_layers=10,
@@ -119,16 +119,17 @@ def cylinder3d_unsteady(static=True):
         activation='tanh')
 
     # Loss
-    loss = psci.loss.L2(p=2, data_weight=100.0)
+    loss = ppsci.loss.L2(p=2, data_weight=100.0)
 
     # Algorithm
-    algo = psci.algorithm.PINNs(net=net, loss=loss)
+    algo = ppsci.algorithm.PINNs(net=net, loss=loss)
 
     # Optimizer
-    opt = psci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
+    opt = ppsci.optimizer.Adam(
+        learning_rate=0.001, parameters=net.parameters())
 
     # Solver parameter
-    solver = psci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
+    solver = ppsci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
 
     res_shape = [(780, 4), (260, 4), (260, 4), (2, 4), (3000, 4)]
     # Solver time: (100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110]

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import numpy as np
 import paddle
 
@@ -20,31 +20,31 @@ paddle.seed(1)
 np.random.seed(1)
 
 # set geometry and boundary
-geo = psci.geometry.Rectangular(origin=(-0.05, -0.05), extent=(0.05, 0.05))
+geo = ppsci.geometry.Rectangular(origin=(-0.05, -0.05), extent=(0.05, 0.05))
 
 # discretize geometry
 geo_disc = geo.discretize(npoints=60000, method="sampling")
 
 # N-S
-pde = psci.pde.NavierStokes(nu=0.01, rho=1.0, dim=2, time_dependent=False)
+pde = ppsci.pde.NavierStokes(nu=0.01, rho=1.0, dim=2, time_dependent=False)
 
 # discretization pde
 pde_disc = pde.discretize(geo_disc=geo_disc)
 
 # Network
-net = psci.network.FCNet(
+net = ppsci.network.FCNet(
     num_ins=2, num_outs=3, num_layers=10, hidden_size=50, activation='tanh')
 
 net.initialize('checkpoint/dynamic_net_params_10000.pdparams')
 
 # Algorithm
-algo = psci.algorithm.PINNs(net=net)
+algo = ppsci.algorithm.PINNs(net=net)
 
 # Optimizer
-opt = psci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
+opt = ppsci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
 
 # Solver
-solver = psci.solver.Solver(pde=pde_disc, algo=algo)
+solver = ppsci.solver.Solver(pde=pde_disc, algo=algo)
 solution = solver.predict()
 
-psci.visu.save_vtk(geo_disc=pde_disc.geometry, data=solution)
+ppsci.visu.save_vtk(geo_disc=pde_disc.geometry, data=solution)

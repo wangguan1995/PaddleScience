@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddlescience as psci
+import ppsci
 import numpy as np
 import paddle
 
-cfg = psci.utils.parse_args()
+cfg = ppsci.utils.parse_args()
 
 if cfg is not None:
     # Geometry
@@ -58,7 +58,7 @@ np.random.seed(seed_num)
 ref_sol = lambda x, y: np.cos(x) * np.cosh(y)
 
 # set geometry and boundary
-geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
 geo.add_boundary(
     name="around",
     criteria=lambda x, y: (y == 1.0) | (y == 0.0) | (x == 0.0) | (x == 1.0))
@@ -67,10 +67,10 @@ geo.add_boundary(
 geo_disc = geo.discretize(npoints=npoints, method=sampler_method)
 
 # Laplace
-pde = psci.pde.Laplace(dim=2)
+pde = ppsci.pde.Laplace(dim=2)
 
 # set bounday condition
-bc_around = psci.bc.Dirichlet('u', rhs=ref_sol)
+bc_around = ppsci.bc.Dirichlet('u', rhs=ref_sol)
 
 # add bounday and boundary condition
 pde.add_bc("around", bc_around)
@@ -80,7 +80,7 @@ pde_disc = pde.discretize(geo_disc=geo_disc)
 
 # Network
 # TODO: remove num_ins and num_outs
-net = psci.network.FCNet(
+net = ppsci.network.FCNet(
     num_ins=2,
     num_outs=1,
     num_layers=num_layers,
@@ -88,23 +88,23 @@ net = psci.network.FCNet(
     activation=activation)
 
 # Loss
-loss = psci.loss.L2()
+loss = ppsci.loss.L2()
 
 # Algorithm
-algo = psci.algorithm.PINNs(net=net, loss=loss)
+algo = ppsci.algorithm.PINNs(net=net, loss=loss)
 
 # Optimizer
-opt = psci.optimizer.Adam(
+opt = ppsci.optimizer.Adam(
     learning_rate=learning_rate, parameters=net.parameters())
 
 # Solver
-solver = psci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
+solver = ppsci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
 solution = solver.solve(num_epoch=epochs)
 
-psci.visu.save_vtk(
+ppsci.visu.save_vtk(
     filename=vtk_filename, geo_disc=pde_disc.geometry, data=solution)
 
-psci.visu.save_npy(
+ppsci.visu.save_npy(
     filename=solution_filename, geo_disc=pde_disc.geometry, data=solution)
 
 # MSE

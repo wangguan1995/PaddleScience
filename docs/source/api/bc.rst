@@ -1,6 +1,6 @@
 Boundary condition
 ==================
 
-.. automodule:: paddlescience.bc.bc
+.. automodule:: ppsci.bc.bc
    :members:
    :no-undoc-members:

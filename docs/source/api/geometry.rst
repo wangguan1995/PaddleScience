@@ -1,11 +1,11 @@
 Geometry
 ===================================
 
-.. automodule:: paddlescience.geometry.rectangular
+.. automodule:: ppsci.geometry.rectangular
    :members:
    :no-undoc-members:
-   :inherited-members:   
+   :inherited-members:
 
-.. automodule:: paddlescience.geometry.geometry_discrete
+.. automodule:: ppsci.geometry.geometry_discrete
    :members:
    :no-undoc-members:

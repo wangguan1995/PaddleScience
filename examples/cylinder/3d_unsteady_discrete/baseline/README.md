@@ -31,7 +31,7 @@ Once the concept is clear, next let's take a look at how this translates into th
 
 ### Constructing Geometry
 
-First, define the problem geometry using the `psci.geometry` module interface. In this example,
+First, define the problem geometry using the `ppsci.geometry` module interface. In this example,
 the geometry is a cuboid with the origin at coordinates (-8, -8, -2) and the extent set
 to (25, 8, 2).  There is a cylinder inside the cuboid. 
 The cylinder and the cuboid have the same height. 
@@ -40,7 +40,7 @@ The center of the cylinder is at (0.0, 0.0) and the radius of the cylinder is 0.
 ```
 cc = (0.0, 0.0)
 cr = 0.5
-geo = psci.geometry.CylinderInCube(
+geo = ppsci.geometry.CylinderInCube(
     origin=(-8, -8, -2),
     extent=(25, 8, 2),
     circle_center=cc,
@@ -91,12 +91,12 @@ geo_disc.user = GetRealPhyInfo(start_time, need_info='cord')
 
 After defining Geometry part, define the PDE equations to solve. In this example, the equations are a 
 Navier Stokes. This equation is present in the package, and one only needs to
-create a `psci.pde.NavierStokes` object to set up the equation. 
+create a `ppsci.pde.NavierStokes` object to set up the equation. 
 The goal is to solve for the physical state from 100s to 110s, so set time_dependent to true. Then, set a specific time interval.
 
 
 ```
-pde = psci.pde.NavierStokes(
+pde = ppsci.pde.NavierStokes(
     nu=0.01,
     rho=1.0,
     dim=3,
@@ -111,15 +111,15 @@ The boundary equations in PDE are strongly bound to the boundary definitions in 
 The physical information on the three boundaries needs to be set and then added using `pde.add_bc`.
 
 ```
-bc_left_u = psci.bc.Dirichlet('u', rhs=1.0, weight=1.0)
-bc_left_v = psci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
-bc_left_w = psci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
+bc_left_u = ppsci.bc.Dirichlet('u', rhs=1.0, weight=1.0)
+bc_left_v = ppsci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
+bc_left_w = ppsci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
 
-bc_right_p = psci.bc.Dirichlet('p', rhs=0.0, weight=1.0)
+bc_right_p = ppsci.bc.Dirichlet('p', rhs=0.0, weight=1.0)
 
-bc_circle_u = psci.bc.Dirichlet('u', rhs=0.0, weight=1.0)
-bc_circle_v = psci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
-bc_circle_w = psci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
+bc_circle_u = ppsci.bc.Dirichlet('u', rhs=0.0, weight=1.0)
+bc_circle_v = ppsci.bc.Dirichlet('v', rhs=0.0, weight=1.0)
+bc_circle_w = ppsci.bc.Dirichlet('w', rhs=0.0, weight=1.0)
 
 pde.add_bc("left", bc_left_u, bc_left_v, bc_left_w)
 pde.add_bc("right", bc_right_p)
@@ -137,12 +137,12 @@ pde_disc = pde.discretize(
 ### Constructing the neural net
 
 Now the PDE part is almost done, we move on to constructing the neural net.
-It's straightforward to define a fully connected network by creating a `psci.network.FCNet` object.
+It's straightforward to define a fully connected network by creating a `ppsci.network.FCNet` object.
 Following is how we create an FFN of 5 hidden layers with 20 neurons on each, using hyperbolic
 tangent as the activation function.
 
 ```
-net = psci.network.FCNet(
+net = ppsci.network.FCNet(
     num_ins=2,
     num_outs=3,
     num_layers=5,
@@ -154,27 +154,27 @@ net = psci.network.FCNet(
 Next, one of the most important steps is define the loss function. Here we use L2 loss.
 
 ```
-loss = psci.loss.L2(p=2)
+loss = ppsci.loss.L2(p=2)
 ```
 
 By design, the `loss` object conveys complete information of the PDE and hence the
 latter is eclipsed in further steps. Now combine the neural net and the loss and we
-create the `psci.algorithm.PINNs` model algorithm.
+create the `ppsci.algorithm.PINNs` model algorithm.
 
 ```
-algo = psci.algorithm.PINNs(net=net, loss=loss)
+algo = ppsci.algorithm.PINNs(net=net, loss=loss)
 ```
 
 Next, by plugging in an Adam optimizer, a solver is contructed and you are ready
 to kick off training. In this example, the Adam optimizer is used and is given
 a learning rate of 0.001. 
 
-The `psci.solver.Solver` class bundles the `pde`, which is the training data, the PINNs model, which is called `algo` here,
+The `ppsci.solver.Solver` class bundles the `pde`, which is the training data, the PINNs model, which is called `algo` here,
 and the optimizer, into a solver object that exposes the `solve` interface.
 
 ```
-opt = psci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
-solver = psci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
+opt = ppsci.optimizer.Adam(learning_rate=0.001, parameters=net.parameters())
+solver = ppsci.solver.Solver(pde=pde_disc, algo=algo, opt=opt)
 ```
 
 When using `discrete-time method`, the physical information of each time period needs to be solved in turn.
@@ -200,10 +200,10 @@ for next_time in range(int(pde_disc.time_internal[0])+1, int(pde_disc.time_inter
     current_user = np.array(next_uvwp[-1])[:, 0:3]
 ```
 
-`psci.visu.save_vtk` is a helper utility for quick visualization. It saves
+`ppsci.visu.save_vtk` is a helper utility for quick visualization. It saves
 the graphs in vtp file which one can play using [Paraview](https://www.paraview.org/).
 
 ```
 file_path = "train_cylinder_unsteady_re100/cylinder3d_train_rslt_" + str(next_time)
-psci.visu.save_vtk(filename=file_path, geo_disc=pde_disc.geometry, data=next_uvwp)
+ppsci.visu.save_vtk(filename=file_path, geo_disc=pde_disc.geometry, data=next_uvwp)
 ```

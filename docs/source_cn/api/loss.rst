@@ -1,7 +1,7 @@
 损失函数
 ===================================
 
-.. automodule:: paddlescience.loss.loss_L2
+.. automodule:: ppsci.loss.loss_L2
 
 .. py:class:: L2(pdes, geo, aux_func=None, eq_weight=None, bc_weight=None, synthesis_method='add', run_in_batch=True)
 
@@ -10,7 +10,7 @@
       **参数:**
 
          - **pdes** (*PDE*) – 用于计算方程损失的偏微分方程。
-         - **geo** (`GeometryDiscrete <https://paddlescience.paddlepaddle.org.cn/api/geometry.html#paddlescience.geometry.geometry_discrete.GeometryDiscrete>`_) – 计算损失的离散几何。
+         - **geo** (`GeometryDiscrete <https://paddlescience.paddlepaddle.org.cn/api/geometry.html#ppsci.geometry.geometry_discrete.GeometryDiscrete>`_) – 计算损失的离散几何。
          - **aux_func** (*Callable|None*) – 可选，默认为None。如果被指定，它应该是一个返回包含Paddle Tensors的列表的函数。该列表被用作方程右边的值去计算损失。
          - **eq_weight** (*float|None*) – 可选，默认为None。如果被指定，与方程损失(the equation loss)相乘后再合成总loss。
          - **bc_weight** (*numpy.array|None*) –可选，默认为None。如果被指定，它应该是一个一维的numpy数组(array)，其元素数量与边界条件点相同。 其作为权重去计算边界条件损失。
@@ -22,6 +22,6 @@
    .. code-block::
 
       import paddlescience as psci
-      net = psci.loss.L2(pdes=pdes, geo=geo)
+      net = ppsci.loss.L2(pdes=pdes, geo=geo)
 
 

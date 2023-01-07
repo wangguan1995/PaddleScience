@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 import sympy
 
-import paddlescience as psci
+import ppsci
 
 
 def jud_ns(geo_disc,
@@ -28,7 +28,7 @@ def jud_ns(geo_disc,
 
     dim = geo_disc.interior.shape[1]
 
-    pde = psci.pde.NavierStokes(dim=dim, time_dependent=time_dependent)
+    pde = ppsci.pde.NavierStokes(dim=dim, time_dependent=time_dependent)
     for k in geo_disc.boundary.keys():
         pde.add_bc(k, *bc[k])
     if time_interval:
@@ -82,12 +82,12 @@ def test_navierstokes0():
     2d
     time_dependent=False
     """
-    geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+    geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y: (y == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=10)
 
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
     bc = {'top': [bc1, bc2]}
     jud_ns(geo_disc, bc, time_dependent=False)
 
@@ -101,12 +101,12 @@ def test_navierstokes1():
     time_interval = [0, 0.5]
     time_step=0.1
     """
-    geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+    geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y: (y == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=10)
 
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
     bc = {'top': [bc1, bc2]}
     jud_ns(
         geo_disc,
@@ -125,12 +125,12 @@ def test_navierstokes2():
     time_interval = [0, 150]
     time_step=50
     """
-    geo = psci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
+    geo = ppsci.geometry.Rectangular(origin=(0.0, 0.0), extent=(1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y: (y == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=10)
 
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
     bc = {'top': [bc1, bc2]}
     jud_ns(
         geo_disc,
@@ -147,13 +147,13 @@ def test_navierstokes3():
     3d
     time_dependent=False
     """
-    geo = psci.geometry.Rectangular(
+    geo = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y, z: (z == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=40)
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
-    bc3 = psci.bc.Dirichlet('w', rhs=0)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
+    bc3 = ppsci.bc.Dirichlet('w', rhs=0)
     bc = {'top': [bc1, bc2, bc3]}
     jud_ns(geo_disc, bc, time_dependent=False)
 
@@ -167,13 +167,13 @@ def test_navierstokes4():
     time_interval = [0, 2.]
     time_step=0.1
     """
-    geo = psci.geometry.Rectangular(
+    geo = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y, z: (z == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=40)
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
-    bc3 = psci.bc.Dirichlet('w', rhs=0)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
+    bc3 = ppsci.bc.Dirichlet('w', rhs=0)
     bc = {'top': [bc1, bc2, bc3]}
     jud_ns(
         geo_disc,
@@ -192,13 +192,13 @@ def test_navierstokes5():
     time_interval = [0, 2.]
     time_step=0.1
     """
-    geo = psci.geometry.Rectangular(
+    geo = ppsci.geometry.Rectangular(
         origin=(0.0, 0.0, 0.0), extent=(1.0, 1.0, 1.0))
     geo.add_boundary(name="top", criteria=lambda x, y, z: (z == 1.0))
     geo_disc = geo.discretize(method="uniform", npoints=40)
-    bc1 = psci.bc.Dirichlet('u', rhs=0)
-    bc2 = psci.bc.Dirichlet('v', rhs=0)
-    bc3 = psci.bc.Dirichlet('w', rhs=0)
+    bc1 = ppsci.bc.Dirichlet('u', rhs=0)
+    bc2 = ppsci.bc.Dirichlet('v', rhs=0)
+    bc3 = ppsci.bc.Dirichlet('w', rhs=0)
     bc = {'top': [bc1, bc2, bc3]}
     jud_ns(
         geo_disc,

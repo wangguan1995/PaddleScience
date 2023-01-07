@@ -49,17 +49,17 @@ The component organization is illustrated in the following figure.
    :maxdepth: 2
    :caption: API Reference
 
-   paddlescience.pde <api/pde>
-   paddlescience.geometry <api/geometry>
-   paddlescience.bc <api/bc>
-   paddlescience.ic <api/ic>
-   paddlescience.network <api/network>
-   paddlescience.loss <api/loss>
-   paddlescience.algorithm <api/algorithm>
-   paddlescience.optimizer <api/optimizer>
-   paddlescience.solver <api/solver>
-   paddlescience.visu <api/visu>
-   paddlescience.config <api/config>
+   ppsci.pde <api/pde>
+   ppsci.geometry <api/geometry>
+   ppsci.bc <api/bc>
+   ppsci.ic <api/ic>
+   ppsci.network <api/network>
+   ppsci.loss <api/loss>
+   ppsci.algorithm <api/algorithm>
+   ppsci.optimizer <api/optimizer>
+   ppsci.solver <api/solver>
+   ppsci.visu <api/visu>
+   ppsci.config <api/config>
 
    
 .. toctree::
