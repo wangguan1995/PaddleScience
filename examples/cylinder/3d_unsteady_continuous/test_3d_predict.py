@@ -12,35 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import vtk
 import copy
+
 import numpy as np
 import paddle
-import paddlescience as psci
 import paddle.distributed as dist
+import paddlescience as psci
 from pyevtk.hl import pointsToVTK
+
 import sample_boundary_training_data as sample_data
+import vtk
 from load_lbm_data import load_ic_data, load_supervised_data
 
-paddle.seed(1)
-np.random.seed(1)
+paddle.seed(42)
+np.random.seed(42)
 
-paddle.enable_static()
+# paddle.enable_static()
 
 # time arraep 
-t_start = 2000.1
-t_end = 2001.1
-t_step = 0.1
-time_num = int((t_end - t_start)/t_step)
-time_tmp = np.linspace(t_start-2000, t_end-2000, time_num+1, endpoint=True)
-time_array = time_tmp
+ic_t = 200000
+t_start = 200050
+t_end = 200250
+t_step = 50
+time_num = int((t_end - t_start) / t_step) + 1
+time_tmp = np.linspace(t_start - ic_t, t_end - ic_t, time_num, endpoint=True)
+time_array = np.random.choice(time_tmp, time_num)
+time_array.sort()
+print(f"time_num = {time_num}, time_array = {time_array}")
 
 # num points to sample per GPU
-num_points = 100000
+num_points = 15000
 
 # discretize node by geo
-inlet_txyz, outlet_txyz, cylinder_txyz, interior_txyz = sample_data.sample_data(t_step=len(time_array), nr_points=num_points)
-
+inlet_txyz, outlet_txyz, _, _, cylinder_txyz, interior_txyz = sample_data.sample_data(t_step=time_num, nr_points=num_points)
 i_t = interior_txyz[:, 0]
 i_x = interior_txyz[:, 1]
 i_y = interior_txyz[:, 2]
@@ -93,7 +97,7 @@ pde.set_bc("outlet", bc_outlet_p)
 net = psci.network.FCNet(
     num_ins=4, num_outs=4, num_layers=6, hidden_size=50, activation='tanh')
 
-net.initialize('checkpoint/static_model_params_16000.pdparams')
+net.initialize('checkpoint/dynamic_net_params_100000.pdparams')
 
 outeq = net(inputeq)
 outbc1 = net(inputbc1)
@@ -121,10 +125,31 @@ solver = psci.solver.Solver(pde=pde, algo=algo)
 solution = solver.predict()
 
 n = int(i_x.shape[0] / len(time_array))
-i_x = i_x.astype("float32")
-i_y = i_y.astype("float32")
-i_z = i_z.astype("float32")
+print(i_x.min(), i_x.max())
+print(i_y.min(), i_y.max())
+print(i_z.min(), i_z.max())
+i_x = i_x.astype("float32") * 1600
+i_y = i_y.astype("float32") * 800
+i_z = i_z.astype("float32") * 320
+# ic_t = 2000.0
+# n_sup = 2000
+# txyz_uvwpe_ic = load_ic_data(ic_t)
+# i_x = txyz_uvwpe_ic[:, 1]
+# i_y = txyz_uvwpe_ic[:, 2]
+# i_z = txyz_uvwpe_ic[:, 3]
+# i_u = txyz_uvwpe_ic[:, 4]
+# i_v = txyz_uvwpe_ic[:, 5]
+# i_w = txyz_uvwpe_ic[:, 6]
+# i_p = txyz_uvwpe_ic[:, 7]
+# print(i_p.shape)
 
-cord = np.stack((i_x[0:n], i_y[0:n], i_z[0:n]), axis=1)
-psci.visu.save_vtk_cord(filename="./vtk/output", time_array=time_array, cord=cord, data=solution)
+# solution = [
+#     paddle.to_tensor(
+#     np.stack([i_u, i_v, i_w, i_p], axis=1)
+# )
+# ]
+# cord = np.stack((i_x[0:n], i_y[0:n], i_z[0:n]), axis=1)
+cord = np.stack((i_x, i_y, i_z), axis=1)
+print(f"cord.shape = {cord.shape}")
+psci.visu.save_vtk_cord(filename="./vtk/output_2023_1_11", time_array=time_array, cord=cord, data=solution)
 

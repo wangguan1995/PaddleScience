@@ -52,7 +52,7 @@ class NavierStokes(PDE):
         rho (float): density.
         dim (integer): dquation's dimention. 2 and 3 are supported.
         time_dependent (bool): time-dependent or time-independent.
-        weight (optional, float or list of float or lambda function): weight in computing equation loss. The default value is 1.0.        
+        weight (optional, float or list of float or lambda function): weight in computing equation loss. The default value is 1.0.
 
     Example:
         >>> import paddlescience as psci
@@ -190,7 +190,7 @@ class NavierStokes(PDE):
             '''
             k = sympy.Function('k')(t, x, y, z)
             ep = sympy.Function('ep')(t, x, y, z)
-            
+
             # normal direction
             self.normal = sympy.Symbol('n')
             # Model constants, these parameters are to be defined
@@ -225,7 +225,7 @@ class NavierStokes(PDE):
             momentum_y = v.diff(t) + u * v.diff(x) + v * v.diff(
                 y) + w * v.diff(z) + p.diff(y) - ((nu + nu_t) * v.diff(x)).diff(x) - ((nu + nu_t) * v.diff(y)).diff(y) - ((nu + nu_t) * v.diff(z)).diff(z)
             momentum_z = w.diff(t) + u * w.diff(x) + v * w.diff(
-                y) + w * w.diff(z) + p.diff(z) - ((nu + nu_t) * w.diff(x)).diff(x) - ((nu + nu_t) * w.diff(y)).diff(y) - ((nu + nu_t) * w.diff(z)).diff(z)         
+                y) + w * w.diff(z) + p.diff(z) - ((nu + nu_t) * w.diff(x)).diff(x) - ((nu + nu_t) * w.diff(y)).diff(y) - ((nu + nu_t) * w.diff(z)).diff(z)
             k_equation = k.diff(t) + u * k.diff(x) + v * k.diff(y) + w * k.diff(z) - ((nu + nu_t / sig_k) * k.diff(x)).diff(x) - ((nu + nu_t / sig_k) * k.diff(y)).diff(y) - ((nu + nu_t / sig_k) * k.diff(z)).diff(z) - P_k + ep
             ep_equation = ep.diff(t) + u * ep.diff(x) + v * ep.diff(y) - ((nu + nu_t / sig_ep) * ep.diff(x)).diff(x) - ((nu + nu_t / sig_ep) * ep.diff(y)).diff(y) - (C_ep1 * P_k - C_ep2 * ep) * ep / (k + 1e-3)
 

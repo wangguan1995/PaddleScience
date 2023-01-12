@@ -133,7 +133,7 @@ class PINNs(AlgorithmBase):
 
         return inputs, inputs_attr
 
-    # create labels used in computing loss, but not used as net input 
+    # create labels used in computing loss, but not used as net input
     def create_labels_from_pde(self,
                                pde,
                                interior_shape=None,
@@ -188,6 +188,7 @@ class PINNs(AlgorithmBase):
         # bc
         #   - labels_attr["bc"][name_b][i]["rhs"]
         #   - labels_attr["bc"][name_b][i]["weight"]
+        #   - labels_attr["bc"][name_b][i]["normal"]
         labels_attr["bc"] = OrderedDict()
         for name_b, bc in pde.bc.items():
             labels_attr["bc"][name_b] = list()
@@ -195,6 +196,9 @@ class PINNs(AlgorithmBase):
                 attr = dict()
                 rhs = b.rhs_disc
                 weight = b.weight_disc
+                normal = b.normal_disc
+
+                # rhs
                 if (rhs is None) or np.isscalar(rhs):
                     attr["rhs"] = rhs
                 elif type(rhs) is np.ndarray:
@@ -205,6 +209,7 @@ class PINNs(AlgorithmBase):
                         data = rhs
                     labels.append(data)
 
+                # weight
                 if (weight is None) or np.isscalar(weight):
                     attr["weight"] = weight
                 elif type(weight) is np.ndarray:
@@ -215,11 +220,27 @@ class PINNs(AlgorithmBase):
                         data = weight
                     labels.append(data)
 
+                # normal
+                # print(normal)
+                if normal is None:
+                    attr["normal"] = normal
+                elif np.isscalar(normal):
+                    attr["normal"] = LabelInt(len(labels))
+                    data = normal
+                    labels.append(data)
+                else:
+                    attr["normal"] = LabelInt(len(labels))
+                    if pde.time_dependent == True and pde.time_disc_method is None:
+                        data = np.tile(normal, len(pde.time_array[1::]))
+                    else:
+                        data = normal
+                    labels.append(data)
+
                 labels_attr["bc"][name_b].append(attr)
 
         # ic
-        #   - labels_attr["ic"][i]["rhs"] 
-        #   - labels_attr["ic"][i]["weight"], weight is None or scalar 
+        #   - labels_attr["ic"][i]["rhs"]
+        #   - labels_attr["ic"][i]["weight"], weight is None or scalar
         labels_attr["ic"] = list()
         for ic in pde.ic:
             attr = dict()
@@ -243,8 +264,8 @@ class PINNs(AlgorithmBase):
         #   - labels_attr["user"]["data_cur"][i]
         #   - labels_attr["user"]["data_next"][i]
 
-        # data_cur: solution of current time step on user points 
-        # data_next: reference solution of next time step on user points 
+        # data_cur: solution of current time step on user points
+        # data_next: reference solution of next time step on user points
         if pde.geometry.user is not None:
             labels_attr["user"] = OrderedDict()
 
@@ -303,6 +324,19 @@ class PINNs(AlgorithmBase):
         inputs_attr_b = OrderedDict()
         inputs_attr_it = OrderedDict()
         inputs_attr_d = OrderedDict()
+        for l in self.loss._eqlist:
+            print(f"===={l}====")
+        print("===========")
+        for l in self.loss._bclist:
+            print(f"===={l}====")
+        print("===========")
+        for l in self.loss._iclist:
+            print(f"===={l}====")
+        print("===========")
+        for l in self.loss._suplist:
+            print(f"===={l}====")
+        print("===========")
+        # exit()
 
         # interior
         for eq in pde.equations:
@@ -446,16 +480,11 @@ class PINNs(AlgorithmBase):
 
             # data next
             labels_attr["user"]["data_next"] = list()
-            labels_attr["user"]["data_next_sub"] = list()
-            n = self.loss._supref[0].shape[-1]
-            sub = self.loss._supsub[0]
+            # print(self.loss._supref[0].shape) # (10000, 3)
+            n = self.loss._supref[0].shape[-1] # 3
             for i in range(n):
                 labels_attr["user"]["data_next"].append(LabelInt(len(labels)))
                 labels.append(self.loss._supref[0][:, i])
-                if sub is None:
-                    labels_attr["user"]["data_next_sub"].append(i)
-                else:
-                    labels_attr["user"]["data_next_sub"].append(sub[i])
 
         # padding
         nprocs = paddle.distributed.get_world_size()
@@ -471,7 +500,7 @@ class PINNs(AlgorithmBase):
             print(i.shape)
         print("")
 
-    # print label_attr 
+    # print label_attr
     def __print_label_attr(self, attr):
 
         print("** interior-equations ** ")
@@ -540,11 +569,11 @@ class PINNs(AlgorithmBase):
         inputs = inputs_labels[0:ninputs]  # inputs is from zero to ninputs
         labels = inputs_labels[ninputs::]  # labels is the rest
 
-        # loss 
+        # loss
         #   - interior points: eq loss
         #   - boundary points: bc loss
         #   - initial points:  ic loss
-        #   - data points: data loss and eq loss 
+        #   - data points: data loss and eq loss
         loss_eq = 0.0
         loss_bc = 0.0
         loss_ic = 0.0
@@ -571,7 +600,7 @@ class PINNs(AlgorithmBase):
             outs.append(out_i)
             n += 1
 
-        # boundary points: compute bc_loss 
+        # boundary points: compute bc_loss
         for name_b, input_attr in inputs_attr["bc"].items():
             input = inputs[n]
 
@@ -614,16 +643,17 @@ class PINNs(AlgorithmBase):
             # print("user: ", len(input))
 
             # eq loss
-            loss_id, out_id = self.loss.eq_loss(
-                pde,
-                self.net,
-                input,
-                input_attr,
-                labels,
-                labels_attr["user"],
-                bs=-1,
-                params=params)
-            loss_eq += loss_id
+            # loss_id, out_id = self.loss.eq_loss(
+            #     pde,
+            #     self.net,
+            #     input,
+            #     input_attr,
+            #     labels,
+            #     labels_attr["user"],
+            #     bs=-1,
+            #     params=params)
+            # loss_eq += loss_id
+            # outs.append(out_id)
 
             # data loss
             loss_d, out_d = self.loss.data_loss(
@@ -636,29 +666,31 @@ class PINNs(AlgorithmBase):
                 bs=-1,
                 params=params)  # TODO: bs is not used
             loss_data += loss_d
-            outs.append(out_id)
-
             n += 1
 
         # loss
-        p = self.loss.norm_p
-        if p == 1:
-            loss = self.__sqrt(loss_eq) + self.__sqrt(loss_bc) + self.__sqrt(
-                loss_ic) + self.__sqrt(loss_data)
-        elif p == 2:
-            loss = self.__sqrt(loss_eq + loss_bc + loss_ic + loss_data)
-        else:
-            pass
-            # TODO: error out
+        loss = loss_eq + loss_bc + loss_ic + loss_data
+        # loss = loss_eq
+        # print(f"total loss= {loss.item():.15f}")
+        # loss = loss_eq
+        # p = self.loss.norm_p
+        # if p == 1:
+        #     loss = self.__sqrt(loss_eq) + self.__sqrt(loss_bc) + self.__sqrt(
+        #         loss_ic) + self.__sqrt(loss_data)
+        # elif p == 2:
+        #     loss = self.__sqrt(loss_eq + loss_bc + loss_ic + loss_data)
+        # else:
+        #     pass
+        #     # TODO: error out
 
         loss_details = list()
-        loss_details.append(self.__sqrt(loss_eq))
-        loss_details.append(self.__sqrt(loss_bc))
+        loss_details.append((loss_eq))
+        loss_details.append((loss_bc))
         loss_ic = (loss - loss) if isinstance(loss_ic, float) else loss_ic
-        loss_details.append(self.__sqrt(loss_ic))
+        loss_details.append((loss_ic))
         loss_data = (loss - loss) if isinstance(loss_data,
                                                 float) else loss_data
-        loss_details.append(self.__sqrt(loss_data))
+        loss_details.append((loss_data))
 
         return loss, outs, loss_details
 

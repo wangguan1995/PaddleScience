@@ -162,6 +162,15 @@ class Solver(object):
 
         # create inputs/labels and its attributes
         inputs, inputs_attr = self.algo.create_inputs(self.pde)
+        # print([x.shape for x in inputs]) # [(150000, 4), (16605, 4), (12645, 4), (16125, 4), (63916, 4), (8000, 4)]
+        # print(inputs_attr)
+        # OrderedDict([
+        # ('interior', OrderedDict([('0', inputs_attr)])), 
+        # ('bc', OrderedDict([('inlet', inputs_attr), 
+        # ('cylinder', inputs_attr), 
+        # ('outlet', inputs_attr)])), 
+        # ('ic', OrderedDict([('0', inputs_attr)])), 
+        # ('user', OrderedDict([('0', inputs_attr)]))])
         self.inputs = inputs
         self.inputs_attr = inputs_attr
 

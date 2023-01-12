@@ -33,7 +33,7 @@ class NetOut:
         else:
             net._sub = item
         return net
-        
+
 class FCNet(NetworkBase):
     """
     Full connected network. Each layer consists of a matmul operator, an elementwise_add operator, and an activation function operator expect for the last layer.
@@ -179,7 +179,11 @@ class FCNet(NetworkBase):
             # and initialize it in solver program.
             if paddle.in_dynamic_mode():
                 layer_state_dict = paddle.load(path)
-                self.set_state_dict(layer_state_dict)
+                self.load_dict(layer_state_dict)
+                unused_keys = [
+                    key for key in layer_state_dict if key not in self.state_dict()
+                ]
+                print(f"unused_keys = {unused_keys}")
         else:
             # convert int to list of int
             if isinstance(n, int):

@@ -17,9 +17,9 @@ from .pde_laplace import Laplace
 from .pde_poisson import Poisson
 
 # if using wf ns, select below
-from .pde_navier_stokes import NavierStokes
+# from .pde_navier_stokes import NavierStokes
 
 # if using idel ns, select below
-# from .pde_navier_stokes_original import NavierStokes
+from .pde_navier_stokes_original import NavierStokes
 
 from .pde_euler_beam import EulerBeam
