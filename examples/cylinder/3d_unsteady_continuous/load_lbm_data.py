@@ -205,7 +205,7 @@ def load_ic_data(t):
     flow_array[:, 0] = 0
 
     # Normalize x,y,z to [0,1]
-    for  coordinate, interval in domain_coordinate_interval_dict.items():
+    for coordinate, interval in domain_coordinate_interval_dict.items():
         min_domain = interval[0]
         max_domain = interval[1]
         normalize(max_domain, min_domain, flow_array, coordinate)

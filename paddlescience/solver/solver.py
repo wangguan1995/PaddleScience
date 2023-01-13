@@ -238,12 +238,22 @@ class Solver(object):
                 self.opt.step()
                 self.opt.clear_grad()
 
-                print("epoch: " + str(epoch + 1), " loss:",
-                      loss.numpy()[0], " eq loss:", loss_details[0].numpy()[0],
-                      " bc loss:", loss_details[1].numpy()[0], " ic loss:",
-                      loss_details[2].numpy()[0], " data loss:",
-                      loss_details[3].numpy()[0])
-
+                # print("epoch: " + str(epoch + 1), " loss:",
+                #       loss.numpy()[0], " eq loss:", loss_details[0].numpy()[0],
+                #       " bc loss:", loss_details[1].numpy()[0], " ic loss:",
+                #       loss_details[2].numpy()[0], " data loss:",
+                #       loss_details[3].numpy()[0])
+                print(
+                    f"epoch: {epoch + 1} "
+                    f"lr: {self.opt.get_lr():.5f} "
+                    f"loss: {float(loss):.8f} "
+                    f"eq loss: {float(loss_details[0]):.8f} "
+                    f"bc loss: {float(loss_details[1]):.8f} "
+                    f"ic loss: {float(loss_details[2]):.8f} "
+                    f"data loss: {float(loss_details[3]):.8f}"
+                )
+                if not isinstance(self.opt._learning_rate, float):
+                    self.opt._learning_rate.step()
                 # write loss for visual DL
                 if config.visualdl_enabled() == True:
                     writer_loss.add_scalar(
