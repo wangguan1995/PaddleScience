@@ -217,7 +217,7 @@ np.random.seed(42)
 # time arraep
 ic_t = 200000
 t_start = 200050
-t_end = 200250
+t_end = 200150
 t_step = 50
 time_num = int((t_end - t_start) / t_step) + 1
 time_tmp = np.linspace(t_start - ic_t, t_end - ic_t, time_num, endpoint=True)
@@ -227,14 +227,14 @@ time_array.sort()
 print(f"time_num = {time_num}, time_array = {time_array}")
 
 # weight of losses - inlet, outlet, cylinder, top wall, bottom wall, equation, initial condition, supervised data
-inlet_wgt = 2.0 # 
-outlet_wgt = 1.0 # 
-cylinder_wgt = 5.0 # 
-top_wgt = 2.0 # 
-bottom_wgt = 2.0 # 
-eq_wgt= 10.0 # 
-ic_wgt = 5.0 # 
-sup_wgt = 10.0 # 
+inlet_wgt = 2.0
+outlet_wgt = 1.0
+cylinder_wgt = 5.0
+top_wgt = 2.0
+bottom_wgt = 2.0
+eq_wgt= 5.0
+ic_wgt = 5.0
+sup_wgt = 10.0
 
 # initial value
 txyz_uvwpe_ic = load_ic_data(ic_t)
@@ -262,8 +262,8 @@ sup_w = txyz_uvwpe_s[:, 6]; print(f"sup_w={sup_w.shape} {sup_w.mean().item():.10
 sup_p = txyz_uvwpe_s[:, 7]; print(f"sup_p={sup_p.shape} {sup_p.mean().item():.10f}")
 
 # num points to sample per GPU
-# num_points = 30000
-num_points = 15000
+num_points = 30000
+# num_points = 15000
 # discretize node by geo
 inlet_txyz, outlet_txyz, top_txyz, bottom_txyz, cylinder_txyz, interior_txyz = sample_data.sample_data(t_step=time_num, nr_points=num_points)
 
@@ -348,8 +348,6 @@ pde.set_ic(ic_u, ic_v, ic_w)
 # Network
 net = psci.network.FCNet(
     num_ins=4, num_outs=4, num_layers=6, hidden_size=50, activation="tanh")
-# net.initialize("checkpoint/static_model_params_10000.pdparams")
-# net.initialize("checkpoint/dynamic_net_params_100000.pdparams")
 
 outeq = net(inputeq)
 outbc1 = net(inputbc1)
@@ -542,18 +540,13 @@ solver = psci.solver.Solver(pde=pde, algo=algo, opt=opt)
 
 # Solve
 solution = solver.solve(num_epoch=num_epoch)
-# solution = solver.predict()
-# print(type(solution), len(solution), solution[0].shape)
-# exit()
 
-# solution = [
-#     np.stack([init_u, init_v, init_w, init_p], axis=1)
-# ]
+# print shape of every subset points' output
 for idx, si in enumerate(solution):
     print(f"solution[{idx}].shape = {si.shape}")
 
+# only coord at start time is needed
 n = int(i_x.shape[0] / len(time_array))
-# n = 1
 i_x = i_x.astype("float32")
 i_y = i_y.astype("float32")
 i_z = i_z.astype("float32")
@@ -564,6 +557,5 @@ i_y = i_y * 800
 i_z = i_z * 320
 
 cord = np.stack((i_x[0:n], i_y[0:n], i_z[0:n]), axis=1)
-# cord = np.stack((i_x, i_y, i_z), axis=1)
 # psci.visu.__save_vtk_raw(cordinate=cord, data=solution[0][-n::])
-psci.visu.save_vtk_cord(filename="./vtk/output_2023_1_12", time_array=time_array, cord=cord, data=solution)
+psci.visu.save_vtk_cord(filename="./vtk/output_2023_1_13_new", time_array=time_array, cord=cord, data=solution)
