@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .. import config
-from .geometry_discrete import GeometryDiscrete
 import numpy as np
-import vtk
-import matplotlib.pyplot as plt
+import open3d
 import paddle
 import pyvista as pv
 from pysdf import SDF
+from typing import Union
+from .. import config
+from .geometry_discrete import GeometryDiscrete
 
 
 # Geometry
@@ -114,15 +114,25 @@ class Geometry:
 
         return origin_contained
 
-    def _get_points_from_meshfile(self, tri_mesh):
+    def _get_points_from_meshfile(
+            self, tri_mesh: Union[str, open3d.geometry.Geometry],
+            dtype="float32") -> np.ndarray:
+        """Read STL file and get vertices(points) from mesh.
 
+        Args:
+            tri_mesh (Union[str, open3d.geometry.Geometry]): STL file path or loaded open3d geometry file.
+            dtype (str, optional): Data type of points array. Defaults to "float32".
+
+        Returns:
+            np.ndarray: Array of points with shape of [N, D].
+        """
         if isinstance(tri_mesh, str):
-            mesh_model = pv.read(tri_mesh)
+            mesh = open3d.io.read_triangle_mesh(tri_mesh)
         else:
-            mesh_model = tri_mesh.pv_mesh
-
-        # TODO(liu-xiandong): Need to increase sampling points on the boundary
-        return mesh_model.points
+            mesh = tri_mesh
+        # get all points from mesh and convert to array
+        vertices = np.array(mesh.vertices, dtype=dtype)
+        return vertices
 
     def __sub__(self, other):
         self.tri_mesh['subtraction' + str(len(self.tri_mesh))] = other
