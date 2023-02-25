@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
-import types
 from abc import abstractmethod
 from typing import Union
 
@@ -21,13 +19,21 @@ from paddle.optimizer import lr
 
 from ..utils import logger
 
+__all__ = [
+    "ConstLR",
+    "Linear",
+    "Cosine",
+    "Step",
+    "Piecewise",
+    "MultiStepDecay",
+]
 
 class LRBase(object):
     """Base class for custom learning rates
 
     Args:
         epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
+        iters_per_epoch (int): number of iterations within an epoch
         learning_rate (float): learning rate
         warmup_epoch (int): number of warmup epoch(s)
         warmup_start_lr (float): start learning rate within warmup
@@ -38,7 +44,7 @@ class LRBase(object):
 
     def __init__(self,
                  epochs: int,
-                 step_each_epoch: int,
+                 iters_per_epoch: int,
                  learning_rate: float,
                  warmup_epoch: int,
                  warmup_start_lr: float,
@@ -53,11 +59,11 @@ class LRBase(object):
             logger.warning(msg)
             warmup_epoch = epochs
         self.epochs = epochs
-        self.step_each_epoch = step_each_epoch
+        self.iters_per_epoch = iters_per_epoch
         self.learning_rate = learning_rate
         self.warmup_epoch = warmup_epoch
         self.warmup_steps = self.warmup_epoch if by_epoch else round(
-            self.warmup_epoch * self.step_each_epoch)
+            self.warmup_epoch * self.iters_per_epoch)
         self.warmup_start_lr = warmup_start_lr
         self.last_epoch = last_epoch
         self.by_epoch = by_epoch
@@ -117,7 +123,7 @@ class ConstLR(LRBase):
 
     Args:
         epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
+        iters_per_epoch (int): number of iterations within an epoch
         learning_rate (float): learning rate
         warmup_epoch (int): number of warmup epoch(s)
         warmup_start_lr (float): start learning rate within warmup
@@ -127,14 +133,14 @@ class ConstLR(LRBase):
 
     def __init__(self,
                  epochs,
-                 step_each_epoch,
+                 iters_per_epoch,
                  learning_rate,
                  warmup_epoch=0,
                  warmup_start_lr=0.0,
                  last_epoch=-1,
                  by_epoch=False,
                  **kwargs):
-        super(ConstLR, self).__init__(epochs, step_each_epoch, learning_rate,
+        super(ConstLR, self).__init__(epochs, iters_per_epoch, learning_rate,
                                       warmup_epoch, warmup_start_lr,
                                       last_epoch, by_epoch)
 
@@ -154,7 +160,7 @@ class Linear(LRBase):
 
     Args:
         epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
+        iters_per_epoch (int): number of iterations within an epoch
         learning_rate (float): learning rate
         end_lr (float, optional): The minimum final learning rate. Defaults to 0.0.
         power (float, optional): Power of polynomial. Defaults to 1.0.
@@ -166,7 +172,7 @@ class Linear(LRBase):
 
     def __init__(self,
                  epochs,
-                 step_each_epoch,
+                 iters_per_epoch,
                  learning_rate,
                  end_lr=0.0,
                  power=1.0,
@@ -176,14 +182,14 @@ class Linear(LRBase):
                  last_epoch=-1,
                  by_epoch=False,
                  **kwargs):
-        super(Linear, self).__init__(epochs, step_each_epoch, learning_rate,
+        super(Linear, self).__init__(epochs, iters_per_epoch, learning_rate,
                                      warmup_epoch, warmup_start_lr, last_epoch,
                                      by_epoch)
-        self.decay_steps = (epochs - self.warmup_epoch) * step_each_epoch
+        self.decay_steps = (epochs - self.warmup_epoch) * iters_per_epoch
         self.end_lr = end_lr
         self.power = power
         self.cycle = cycle
-        self.warmup_steps = round(self.warmup_epoch * step_each_epoch)
+        self.warmup_steps = round(self.warmup_epoch * iters_per_epoch)
         if self.by_epoch:
             self.decay_steps = self.epochs - self.warmup_epoch
 
@@ -211,7 +217,7 @@ class Cosine(LRBase):
 
     Args:
         epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
+        iters_per_epoch (int): number of iterations within an epoch
         learning_rate (float): learning rate
         eta_min (float, optional): Minimum learning rate. Defaults to 0.0.
         warmup_epoch (int, optional): The epoch numbers for LinearWarmup. Defaults to 0.
@@ -222,7 +228,7 @@ class Cosine(LRBase):
 
     def __init__(self,
                  epochs,
-                 step_each_epoch,
+                 iters_per_epoch,
                  learning_rate,
                  eta_min=0.0,
                  warmup_epoch=0,
@@ -230,10 +236,10 @@ class Cosine(LRBase):
                  last_epoch=-1,
                  by_epoch=False,
                  **kwargs):
-        super(Cosine, self).__init__(epochs, step_each_epoch, learning_rate,
+        super(Cosine, self).__init__(epochs, iters_per_epoch, learning_rate,
                                      warmup_epoch, warmup_start_lr, last_epoch,
                                      by_epoch)
-        self.T_max = (self.epochs - self.warmup_epoch) * self.step_each_epoch
+        self.T_max = (self.epochs - self.warmup_epoch) * self.iters_per_epoch
         self.eta_min = eta_min
         if self.by_epoch:
             self.T_max = self.epochs - self.warmup_epoch
@@ -258,7 +264,7 @@ class Step(LRBase):
 
     Args:
         epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
+        iters_per_epoch (int): number of iterations within an epoch
         learning_rate (float): learning rate
         step_size (int): the interval to update.
         gamma (float, optional): The Ratio that the learning rate will be reduced. ``new_lr = origin_lr * gamma``. It should be less than 1.0. Default: 0.1.
@@ -270,7 +276,7 @@ class Step(LRBase):
 
     def __init__(self,
                  epochs,
-                 step_each_epoch,
+                 iters_per_epoch,
                  learning_rate,
                  step_size,
                  gamma,
@@ -279,10 +285,10 @@ class Step(LRBase):
                  last_epoch=-1,
                  by_epoch=False,
                  **kwargs):
-        super(Step, self).__init__(epochs, step_each_epoch, learning_rate,
+        super(Step, self).__init__(epochs, iters_per_epoch, learning_rate,
                                    warmup_epoch, warmup_start_lr, last_epoch,
                                    by_epoch)
-        self.step_size = step_size * step_each_epoch
+        self.step_size = step_size * iters_per_epoch
         self.gamma = gamma
         if self.by_epoch:
             self.step_size = step_size
@@ -306,7 +312,7 @@ class Piecewise(LRBase):
 
     Args:
         epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
+        iters_per_epoch (int): number of iterations within an epoch
         decay_epochs (List[int]): A list of steps numbers. The type of element in the list is python int.
         values (List[float]): A list of learning rate values that will be picked during different epoch boundaries.
         warmup_epoch (int, optional): The epoch numbers for LinearWarmup. Defaults to 0.
@@ -317,7 +323,7 @@ class Piecewise(LRBase):
 
     def __init__(self,
                  epochs,
-                 step_each_epoch,
+                 iters_per_epoch,
                  decay_epochs,
                  values,
                  warmup_epoch=0,
@@ -326,10 +332,10 @@ class Piecewise(LRBase):
                  by_epoch=False,
                  **kwargs):
         super(Piecewise,
-              self).__init__(epochs, step_each_epoch, values[0], warmup_epoch,
+              self).__init__(epochs, iters_per_epoch, values[0], warmup_epoch,
                              warmup_start_lr, last_epoch, by_epoch)
         self.values = values
-        self.boundaries_steps = [e * step_each_epoch for e in decay_epochs]
+        self.boundaries_steps = [e * iters_per_epoch for e in decay_epochs]
         if self.by_epoch is True:
             self.boundaries_steps = decay_epochs
 
@@ -351,7 +357,7 @@ class MultiStepDecay(LRBase):
 
     Args:
         epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
+        iters_per_epoch (int): number of iterations within an epoch
         learning_rate (float): learning rate
         milestones (List[int]): List of each boundaries. Must be increasing.
         gamma (float, optional): The Ratio that the learning rate will be reduced. ``new_lr = origin_lr * gamma``. It should be less than 1.0. Defaults to 0.1.
@@ -363,7 +369,7 @@ class MultiStepDecay(LRBase):
 
     def __init__(self,
                  epochs,
-                 step_each_epoch,
+                 iters_per_epoch,
                  learning_rate,
                  milestones,
                  gamma=0.1,
@@ -373,9 +379,9 @@ class MultiStepDecay(LRBase):
                  by_epoch=False,
                  **kwargs):
         super(MultiStepDecay, self).__init__(
-            epochs, step_each_epoch, learning_rate, warmup_epoch,
+            epochs, iters_per_epoch, learning_rate, warmup_epoch,
             warmup_start_lr, last_epoch, by_epoch)
-        self.milestones = [x * step_each_epoch for x in milestones]
+        self.milestones = [x * iters_per_epoch for x in milestones]
         self.gamma = gamma
         if self.by_epoch:
             self.milestones = milestones
@@ -390,132 +396,5 @@ class MultiStepDecay(LRBase):
         if self.warmup_steps > 0:
             learning_rate = self.linear_warmup(learning_rate)
 
-        setattr(learning_rate, "by_epoch", self.by_epoch)
-        return learning_rate
-
-
-class ReduceOnPlateau(LRBase):
-    """ReduceOnPlateau learning rate decay
-    Args:
-        epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
-        learning_rate (float): learning rate
-        mode (str, optional): ``'min'`` or ``'max'`` can be selected. Normally, it is ``'min'`` , which means that the
-            learning rate will reduce when ``loss`` stops descending. Specially, if it's set to ``'max'``, the learning
-            rate will reduce when ``loss`` stops ascending. Defaults to ``'min'``.
-        factor (float, optional): The Ratio that the learning rate will be reduced. ``new_lr = origin_lr * factor`` .
-            It should be less than 1.0. Defaults to 0.1.
-        patience (int, optional): When ``loss`` doesn't improve for this number of epochs, learing rate will be reduced.
-            Defaults to 10.
-        threshold (float, optional): ``threshold`` and ``threshold_mode`` will determine the minimum change of ``loss`` .
-            This make tiny changes of ``loss`` will be ignored. Defaults to 1e-4.
-        threshold_mode (str, optional): ``'rel'`` or ``'abs'`` can be selected. In ``'rel'`` mode, the minimum change of ``loss``
-            is ``last_loss * threshold`` , where ``last_loss`` is ``loss`` in last epoch. In ``'abs'`` mode, the minimum
-            change of ``loss`` is ``threshold`` . Defaults to ``'rel'`` .
-        cooldown (int, optional): The number of epochs to wait before resuming normal operation. Defaults to 0.
-        min_lr (float, optional): The lower bound of the learning rate after reduction. Defaults to 0.
-        epsilon (float, optional): Minimal decay applied to lr. If the difference between new and old lr is smaller than epsilon,
-            the update is ignored. Defaults to 1e-8.
-        warmup_epoch (int, optional): The epoch numbers for LinearWarmup. Defaults to 0.
-        warmup_start_lr (float, optional): start learning rate within warmup. Defaults to 0.0.
-        last_epoch (int, optional): last epoch. Defaults to -1.
-        by_epoch (bool, optional): learning rate decays by epoch when by_epoch is True, else by iter. Defaults to False.
-    """
-    def __init__(self,
-                 epochs,
-                 step_each_epoch,
-                 learning_rate,
-                 mode='min',
-                 factor=0.1,
-                 patience=10,
-                 threshold=1e-4,
-                 threshold_mode='rel',
-                 cooldown=0,
-                 min_lr=0,
-                 epsilon=1e-8,
-                 warmup_epoch=0,
-                 warmup_start_lr=0.0,
-                 last_epoch=-1,
-                 by_epoch=False,
-                 **kwargs):
-        super(ReduceOnPlateau, self).__init__(
-            epochs, step_each_epoch, learning_rate, warmup_epoch,
-            warmup_start_lr, last_epoch, by_epoch)
-        self.mode = mode
-        self.factor = factor
-        self.patience = patience
-        self.threshold = threshold
-        self.threshold_mode = threshold_mode
-        self.cooldown = cooldown
-        self.min_lr = min_lr
-        self.epsilon = epsilon
-
-    def __call__(self):
-        learning_rate = lr.ReduceOnPlateau(
-            learning_rate=self.learning_rate,
-            mode=self.mode,
-            factor=self.factor,
-            patience=self.patience,
-            threshold=self.threshold,
-            threshold_mode=self.threshold_mode,
-            cooldown=self.cooldown,
-            min_lr=self.min_lr,
-            epsilon=self.epsilon)
-
-        if self.warmup_steps > 0:
-            learning_rate = self.linear_warmup(learning_rate)
-
-        # NOTE: Implement get_lr() method for class `ReduceOnPlateau`,
-        # which is called in `log_info` function
-        def get_lr(self):
-            return self.last_lr
-
-        learning_rate.get_lr = types.MethodType(get_lr, learning_rate)
-
-        setattr(learning_rate, "by_epoch", self.by_epoch)
-        return learning_rate
-
-
-class CosineFixmatch(LRBase):
-    """Cosine decay in FixMatch style
-
-    Args:
-        epochs (int): total epoch(s)
-        step_each_epoch (int): number of iterations within an epoch
-        learning_rate (float): learning rate
-        num_warmup_steps (int): the number warmup steps.
-        warmunum_cycles (float, optional): the factor for cosine in FixMatch learning rate. Defaults to 7 / 16.
-        last_epoch (int, optional): last epoch. Defaults to -1.
-        by_epoch (bool, optional): learning rate decays by epoch when by_epoch is True, else by iter. Defaults to False.
-    """
-    def __init__(self,
-                 epochs,
-                 step_each_epoch,
-                 learning_rate,
-                 num_warmup_steps,
-                 num_cycles=7 / 16,
-                 last_epoch=-1,
-                 by_epoch=False):
-        self.epochs = epochs
-        self.step_each_epoch = step_each_epoch
-        self.learning_rate = learning_rate
-        self.num_warmup_steps = num_warmup_steps
-        self.num_cycles = num_cycles
-        self.last_epoch = last_epoch
-        self.by_epoch = by_epoch
-
-    def __call__(self):
-        def _lr_lambda(current_step):
-            if current_step < self.num_warmup_steps:
-                return float(current_step) / float(
-                    max(1, self.num_warmup_steps))
-            no_progress = float(current_step - self.num_warmup_steps) / \
-                        float(max(1, self.epochs * self.step_each_epoch - self.num_warmup_steps))
-            return max(0., math.cos(math.pi * self.num_cycles * no_progress))
-
-        learning_rate = lr.LambdaDecay(
-            learning_rate=self.learning_rate,
-            lr_lambda=_lr_lambda,
-            last_epoch=self.last_epoch)
         setattr(learning_rate, "by_epoch", self.by_epoch)
         return learning_rate

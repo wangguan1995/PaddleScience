@@ -5,17 +5,17 @@ PaddleScience extends the PaddlePaddle framework with reusable
 software components for developing novel scientific computing applications. Such new
 applications include Physics-informed Machine Learning, neural network based PDE solvers,
 machine learning for CFD, and so on. PaddleScience is currently under active development.
-Its design is evolving and its APIs are subject to change.  
+Its design is evolving and its APIs are subject to change.
 
 # Core features and organization
 
 PaddleScience currently focuses on the PINNs model. The core components are as follows.
 
 - PDE, delineating partial differential equations in symbolic forms. Specific PDEs derive the
-    the base PDE class. 
+    the base PDE class.
 
 - Geometry, a declarative interface for defining the geometric domain. Automatic
-    discretization is supported 
+    discretization is supported
 
 - Neural net, currently supporting fully connected layers with customizable size and depth.
 
@@ -28,22 +28,22 @@ PaddleScience currently focuses on the PINNs model. The core components are as f
 
 - Solver, managing the training process given the training data in a batchly fashion.
 
-- Visualization, an easy access to the graph drawing utilities. 
+- Visualization, an easy access to the graph drawing utilities.
 
-The component organization is illustrated in the following figure. 
+The component organization is illustrated in the following figure.
 
 ![image](./docs/source/img/PaddleScience_arch.png)
 
 
 # Getting started
 
-## Prerequisites: 
+## Prerequisites:
 
 Hardware requirements: NVIDIA GPU V100, NVIDIA GPU A100
 
-Package dependencies: paddle, cuda (11.0 or higher), numpy, scipy, sympy, matplotlib, vtk, pyevtk, wget. 
+Package dependencies: paddle, cuda (11.0 or higher), numpy, scipy, sympy, matplotlib, vtk, pyevtk, wget.
 
-PaddleScience currently relies on new features of the Paddle framework so please be advised to download the latest version of Paddle on GitHub or on Gitee. 
+PaddleScience currently relies on new features of the Paddle framework so please be advised to download the latest version of Paddle on GitHub or on Gitee.
 
 For more details on installation, please refer to the offical [PaddlePaddle repository on GitHub](https://github.com/PaddlePaddle/Paddle) or [PaddlePaddle repository on Gitee](https://gitee.com/paddlepaddle/Paddle).
 
@@ -61,7 +61,7 @@ pip install -r requirements.txt
 
 ## Run examples
 
-Some examples are baked in for quick demonstration. Please find them in the `examples` directory. To run an example, just enter the subdirectory and run the demo code in Python commandline. 
+Some examples are baked in for quick demonstration. Please find them in the `examples` directory. To run an example, just enter the subdirectory and run the demo code in Python commandline.
 
 ```
 # Darcy flow (Poisson equation)

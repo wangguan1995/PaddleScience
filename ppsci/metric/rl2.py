@@ -28,6 +28,6 @@ class RelativeL2(nn.Layer):
             rel_l2 = paddle.norm(
                 label_dict[key] - output_dict[key]
             ) / paddle.norm(label_dict[key])
-            metric_dict[key] = rel_l2
+            metric_dict[key] = float(rel_l2)
 
         return metric_dict

@@ -12,5 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
+
 from .l1 import L1Loss
-from .mse import MSELoss, L2Loss
+from .mse import L2Loss, MSELoss
+
+__all__ = [
+    "L1Loss",
+    "L2Loss",
+    "MSELoss",
+    "build_loss",
+]
+
+def build_loss(cfg):
+    """Build loss.
+
+    Args:
+        cfg (AttrDict): Loss config.
+    Returns:
+        Loss: Callable loss object.
+    """
+    cfg = deepcopy(cfg)
+
+    loss_cls = cfg.pop("name")
+    loss = eval(loss_cls)(**cfg)
+    return loss

@@ -53,30 +53,29 @@ class Constraint:
         if dist.get_world_size() > 1:
             batch_sampler = BatchSampler(
                 dataset,
-                batch_size=cfg.batch_size,
-                shuffle=cfg.shuffle,
-                drop_last=cfg.drop_last,
+                batch_size=cfg["batch_size"],
+                shuffle=cfg["shuffle"],
+                drop_last=cfg["drop_last"],
             )
         else:
             batch_sampler = DistributedBatchSampler(
                 dataset,
-                batch_size=cfg.batch_size,
-                shuffle=cfg.shuffle,
-                drop_last=cfg.drop_last,
+                batch_size=cfg["batch_size"],
+                shuffle=cfg["shuffle"],
+                drop_last=cfg["drop_last"],
             )
         init_fn = partial(
             worker_init_fn,
-            num_workers=cfg.num_workers,
+            num_workers=cfg["num_workers"],
             rank=dist.get_rank(),
-            seed=cfg.seed
-        ) if cfg.seed is not None else None
+            seed=cfg["seed"]
+        ) if cfg["seed"] is not None else None
 
         self.data_loader = DataLoader(
             dataset=dataset,
-            places=cfg.device,
-            num_workers=cfg.num_workers,
+            num_workers=cfg["num_workers"],
             return_list=True,
-            use_shared_memory=cfg.use_shared_memory,
+            use_shared_memory=cfg["use_shared_memory"],
             batch_sampler=batch_sampler,
             worker_init_fn=init_fn
         )

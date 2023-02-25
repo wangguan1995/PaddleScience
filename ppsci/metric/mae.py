@@ -30,6 +30,6 @@ class MAE(nn.Layer):
                 label_dict[key],
                 "mean"
             )
-            metric_dict[key] = mae
+            metric_dict[key] = float(mae)
 
         return metric_dict

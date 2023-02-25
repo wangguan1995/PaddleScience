@@ -46,33 +46,34 @@ class Validator(object):
         dataset,
         dataloader_cfg,
         loss,
-        metric
+        metric,
+        name
     ):
         cfg = dataloader_cfg
         self.dataset = dataset
         if dist.get_world_size() > 1:
             batch_sampler = BatchSampler(
                 dataset,
-                batch_size=cfg.batch_size,
+                batch_size=cfg["batch_size"],
                 shuffle=False,
                 drop_last=False,
             )
         else:
             batch_sampler = DistributedBatchSampler(
                 dataset,
-                batch_size=cfg.batch_size,
+                batch_size=cfg["batch_size"],
                 shuffle=False,
                 drop_last=False,
             )
 
         self.data_loader = DataLoader(
             dataset=dataset,
-            places=cfg.device,
-            num_workers=cfg.num_workers,
+            num_workers=cfg["num_workers"],
             return_list=True,
-            use_shared_memory=cfg.use_shared_memory,
+            use_shared_memory=cfg["use_shared_memory"],
             batch_sampler=batch_sampler,
         )
         self.data_iter = iter(self.data_loader)
         self.loss = loss
         self.metric = metric
+        self.name = name

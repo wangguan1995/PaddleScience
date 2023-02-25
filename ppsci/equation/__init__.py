@@ -12,4 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .pde import navier_stokes
+from copy import deepcopy
+
+from .pde import NavierStokes
+
+__all__ = [
+    "NavierStokes",
+    "build_equation"
+]
+
+
+def build_equation(cfg):
+    """Build equation(s)
+
+    Args:
+        cfg (List[AttrDict]): Equation(s) config list.
+
+    Returns:
+        Dict[str, Equation]: Equation(s) in dict.
+    """
+    cfg = deepcopy(cfg)
+    eq_dict = {}
+    for _item in cfg:
+        eq_cls = next(iter(_item.keys()))
+        eq_cfg = _item[eq_cls]
+        eq_name = eq_cfg.pop("name", eq_cls)
+        eq_dict[eq_name] = eval(eq_cls)(**eq_cfg)
+    return eq_dict

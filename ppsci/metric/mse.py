@@ -17,7 +17,7 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 
 
-class RMSE(nn.Layer):
+class MSE(nn.Layer):
     def __init__(self):
         super().__init__()
 
@@ -25,11 +25,11 @@ class RMSE(nn.Layer):
     def forward(self, output_dict, label_dict):
         metric_dict = {}
         for key in output_dict:
-            rmse = F.mse_loss(
+            mse = F.mse_loss(
                 output_dict[key],
                 label_dict[key],
                 "mean"
-            ) ** 0.5
-            metric_dict[key] = float(rmse)
+            )
+            metric_dict[key] = float(mse)
 
         return metric_dict

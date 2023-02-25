@@ -12,27 +12,75 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from copy import deepcopy
 
-import paddle.nn as nn
+from .lr_scheduler import (ConstLR, Cosine, Linear, MultiStepDecay, Piecewise,
+                           Step)
+from .optimizer import SGD, Adam, AdamW, Momentum, RMSProp
 
-from .lr_scheduler import *
-from .optimizer import *
+__all__ = [
+    "build_optimizer",
+    "ConstLR",
+    "Cosine",
+    "Linear",
+    "MultiStepDecay",
+    "Piecewise",
+    "Step",
+    "SGD",
+    "Adam",
+    "AdamW",
+    "Momentum",
+    "RMSProp",
+    "build_optimizer",
+    "build_lr_scheduler"
+]
 
-__all__ = ["build_optimizer"]
 
-def build_optimizer(
-    opt_name: str,
-    lr_sch_name: str,
-    opt_cfg: Dict,
-    lr_sch_cfg: Dict,
-    model_list: List[nn.Layer],
-):
-    lr_sch = eval(lr_sch_name)(**lr_sch_cfg)
 
-    optimizer = eval(opt_name)(
-        learning_rate=lr_sch,
-        **opt_cfg
+def build_lr_scheduler(cfg, epochs, iters_per_epoch):
+    """Build learning rate scheduler.
+
+    Args:
+        cfg (AttrDict): Learing rate scheduler config.
+        epochs (int): Total epochs.
+        iters_per_epoch (int): Number of iterations of one epoch.
+
+    Returns:
+        LRScheduler: Learing rate scheduler.
+    """
+    cfg = deepcopy(cfg)
+    cfg.update({"epochs": epochs, "iters_per_epoch": iters_per_epoch})
+    lr_scheduler_cls = cfg.pop("name")
+    lr_scheduler = eval(lr_scheduler_cls)(**cfg)
+    return lr_scheduler()
+
+
+def build_optimizer(cfg, model_list, epochs, iters_per_epoch):
+    """Build optimizer and learing rate scheduler
+
+    Args:
+        cfg (AttrDict): Learing rate scheduler config.
+        model_list (List[nn.Layer]): List of model(s).
+        epochs (int): Total epochs.
+        iters_per_epoch (int): Number of iterations of one epoch.
+
+    Returns:
+        Optimizer, LRScheduler: Learing rate scheduler.
+    """
+    # build lr_scheduler
+    cfg = deepcopy(cfg)
+    lr_cfg = cfg.pop("lr")
+    lr_scheduler = build_lr_scheduler(
+        lr_cfg,
+        epochs,
+        iters_per_epoch
+    )
+
+    # build optimizer
+    opt_cls = cfg.pop("name")
+    optimizer = eval(opt_cls)(
+        learning_rate=lr_scheduler,
+        **cfg
     )(model_list)
 
-    return optimizer
+    return optimizer, lr_scheduler

@@ -12,4 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
+
+from ..loss import build_loss
+from ..metric import build_metric
 from .validator import NumpyValidator
+
+__all__ = [
+    "NumpyValidator",
+    "build_validator",
+]
+
+
+def build_validator(cfg, geom_dict):
+    """Build validator(s).
+
+    Args:
+        cfg (List[AttrDict]): Validator(s) config list.
+        geom_dict (Dct[str, Geometry]): Geometry(ies) in dict.
+
+    Returns:
+        Dict[str, Validator]: Validator(s) in dict.
+    """
+    cfg = deepcopy(cfg)
+    global_dataloader_cfg = cfg["dataloader"]
+    validator_cfg = cfg["content"]
+
+    validator_dict = {}
+    for _item in validator_cfg:
+        validator_cls = next(iter(_item.keys()))
+        _validator_cfg = _item[validator_cls]
+        validator_name = _validator_cfg.get("name", validator_cls)
+        # select geometry
+        geom_name = _validator_cfg.pop("geom")
+        _validator_cfg["geom"] = geom_dict[geom_name]
+
+        # update complete dataloader config
+        local_dataloader_cfg = _validator_cfg["dataloader"]
+        local_dataloader_cfg.update(global_dataloader_cfg)
+
+        # build loss
+        _validator_cfg["loss"] = build_loss(_validator_cfg["loss"])
+
+        # build metric
+        _validator_cfg["metric"] = build_metric(_validator_cfg["metric"])
+
+        # instantiate validator
+        _validator_cfg["dataloader_cfg"] = _validator_cfg.pop("dataloader")
+        validator_dict[validator_name] = eval(validator_cls)(
+            **_validator_cfg
+        )
+    return validator_dict

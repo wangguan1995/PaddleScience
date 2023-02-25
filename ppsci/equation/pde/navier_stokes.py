@@ -44,8 +44,8 @@ class NavierStokes(PDE):
         w = sympy.Function("w")(*invars) if dim == 3 else sympy.Number(0)
         p = sympy.Function("p")(*invars)
 
-        # continuty equation
-        continuty = u.diff(x) + v.diff(y) + w.diff(z)
+        # continuity equation
+        continuity = u.diff(x) + v.diff(y) + w.diff(z)
 
         # momentum equation
         momentum_x = u.diff(t) + u * u.diff(x) + v * u.diff(
@@ -62,7 +62,7 @@ class NavierStokes(PDE):
                     z).diff(z) + 1.0 / rho * p.diff(z)
 
         super().__init__()
-        self.equations["continuty"] = continuty
+        self.equations["continuity"] = continuity
         self.equations["momentum_x"] = momentum_x
         self.equations["momentum_y"] = momentum_y
         if dim == 3:

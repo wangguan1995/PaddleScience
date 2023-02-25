@@ -12,24 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle
-import paddle.nn as nn
-import paddle.nn.functional as F
+from .eval import eval_func
+from .solver import Solver
+from .train import train_epoch_func, train_LBFGS_epoch_func
 
-
-class RMSE(nn.Layer):
-    def __init__(self):
-        super().__init__()
-
-    @paddle.no_grad()
-    def forward(self, output_dict, label_dict):
-        metric_dict = {}
-        for key in output_dict:
-            rmse = F.mse_loss(
-                output_dict[key],
-                label_dict[key],
-                "mean"
-            ) ** 0.5
-            metric_dict[key] = float(rmse)
-
-        return metric_dict
+__all__ = [
+    "eval_func",
+    "Solver",
+    "train_epoch_func",
+    "train_LBFGS_epoch_func",
+]

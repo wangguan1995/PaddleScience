@@ -1,4 +1,4 @@
-# Copyright (c) 2023 PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,24 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle
-import paddle.nn as nn
-import paddle.nn.functional as F
+import os
+import sys
 
+__dir__ = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(__dir__, '../')))
 
-class RMSE(nn.Layer):
-    def __init__(self):
-        super().__init__()
+from ppsci.solver.solver import Solver
+from ppsci.utils import config
 
-    @paddle.no_grad()
-    def forward(self, output_dict, label_dict):
-        metric_dict = {}
-        for key in output_dict:
-            rmse = F.mse_loss(
-                output_dict[key],
-                label_dict[key],
-                "mean"
-            ) ** 0.5
-            metric_dict[key] = float(rmse)
-
-        return metric_dict
+if __name__ == "__main__":
+    args = config.parse_args()
+    cfg = config.get_config(args.config, overrides=args.override, show=False)
+    cfg.profiler_options = args.profiler_options
+    engine = Solver(cfg, mode="train")
+    engine.train()

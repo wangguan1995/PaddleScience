@@ -15,8 +15,9 @@
 import argparse
 import copy
 import os
-from paddle.static import InputSpec
+
 import yaml
+from paddle.static import InputSpec
 
 from . import logger
 
@@ -69,14 +70,14 @@ def print_dict(d, delimiter=0):
     placeholder = "-" * 60
     for k, v in d.items():
         if isinstance(v, dict):
-            logger.info("{}{} : ".format(delimiter * " ", k))
+            logger.info(f"{delimiter * ' '}{k} : ")
             print_dict(v, delimiter + 4)
         elif isinstance(v, list) and len(v) >= 1 and isinstance(v[0], dict):
-            logger.info("{}{} : ".format(delimiter * " ", k))
+            logger.info(f"{delimiter * ' '}{k} : ")
             for value in v:
                 print_dict(value, delimiter + 2)
         else:
-            logger.info("{}{} : {}".format(delimiter * " ", k, v))
+            logger.info(f"{delimiter * ' '}{k} : {v}")
 
         if k[0].isupper() and delimiter == 0:
             logger.info(placeholder)
@@ -112,7 +113,7 @@ def override(dl, ks, v):
     if isinstance(dl, list):
         k = str2num(ks[0])
         if len(ks) == 1:
-            assert k < len(dl), ("index({}) out of range({})".format(k, dl))
+            assert k < len(dl), f"index({k}) out of range({dl})"
             dl[k] = str2num(v)
         else:
             override(dl[k], ks[1:], v)
@@ -120,12 +121,12 @@ def override(dl, ks, v):
         if len(ks) == 1:
             # assert ks[0] in dl, ("{} is not exist in {}".format(ks[0], dl))
             if not ks[0] in dl:
-                print("A new field ({}) detected!".format(ks[0], dl))
+                print(f"A new field ({ks[0]}) detected!")
             dl[ks[0]] = str2num(v)
         else:
             if ks[0] not in dl.keys():
                 dl[ks[0]] = {}
-                print("A new Series field ({}) detected!".format(ks[0], dl))
+                print(f"A new Series field ({ks[0]}) detected!")
             override(dl[ks[0]], ks[1:], v)
 
 
@@ -145,10 +146,9 @@ def override_config(config, options=None):
     if options is not None:
         for opt in options:
             assert isinstance(opt, str), (
-                "option({}) should be a str".format(opt))
-            assert "=" in opt, (
-                "option({}) should contain a ="
-                "to distinguish between key and value".format(opt))
+                f"option({opt}) should be a str")
+            assert "=" in opt, \
+                f"option({opt}) should contain a = to distinguish between key and value"
             pair = opt.split("=")
             assert len(pair) == 2, ("there can be only a = in the option")
             key, value = pair
@@ -161,8 +161,7 @@ def get_config(fname, overrides=None, show=False):
     """
     Read config from file
     """
-    assert os.path.exists(fname), (
-        "config file({}) is not exist".format(fname))
+    assert os.path.exists(fname), f"config file({fname}) is not exist"
     config = parse_config(fname)
     override_config(config, overrides)
     if show:

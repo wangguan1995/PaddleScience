@@ -16,11 +16,11 @@ from typing import Callable
 
 import numpy as np
 import sympy
+from sympy.parsing.sympy_parser import parse_expr
 
 from ..data.dataset import NamedArrayDataset
 from ..geometry import Geometry
 from ..utils.config import AttrDict
-from ..utils.misc import convert_to_dict
 from .base import Validator
 
 
@@ -30,20 +30,25 @@ class NumpyValidator(Validator):
         label_expr,
         label_dict,
         geom: Geometry,
-        criteria: Callable,
-        data_cfg: AttrDict,
+        dataloader_cfg: AttrDict,
         loss,
+        criteria: Callable=None,
         metric=None,
+        name=None,
     ):
         self.label_expr = label_expr
+        for label_name, label_expr in self.label_expr.items():
+            if isinstance(label_expr, str):
+                self.label_expr[label_name] = parse_expr(label_expr)
+
         self.label_dict = label_dict
         self.input_keys = geom.dim_keys
         self.output_keys = list(label_dict.keys())
-        input = geom.uniform_points_with_criteria(
-            data_cfg.total_size,
+        input = geom.sample_interior(
+            dataloader_cfg["total_size"],
             criteria=criteria
         )
-        input = convert_to_dict(input, self.input_keys)
+        # input = convert_to_dict(input, self.input_keys)
 
         label = {}
         for key, value in label_dict.items():
@@ -71,8 +76,9 @@ class NumpyValidator(Validator):
         dataset = NamedArrayDataset(input, label, weight)
         super().__init__(
             dataset,
-            data_cfg,
+            dataloader_cfg,
             loss,
-            metric
+            metric,
+            name
         )
 

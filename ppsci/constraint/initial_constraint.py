@@ -17,11 +17,11 @@ from typing import Callable
 
 import numpy as np
 import sympy
+from sympy.parsing.sympy_parser import parse_expr
 
 from ..data.dataset import NamedArrayDataset
 from ..geometry import TimeXGeometry
 from ..utils.config import AttrDict
-from ..utils.misc import convert_to_dict
 from .base import Constraint
 
 
@@ -32,23 +32,32 @@ class InitialConstraint(Constraint):
         label_dict,
         time_geom: TimeXGeometry,
         criteria: Callable,
-        data_cfg: AttrDict,
+        dataloader_cfg: AttrDict,
         loss,
         weight_dict=None,
         name="IC"
     ):
         self.label_expr = label_expr
+        for label_name, label_expr in self.label_expr.items():
+            if isinstance(label_expr, str):
+                self.label_expr[label_name] = parse_expr(label_expr)
+
         self.label_dict = label_dict
         self.input_keys = time_geom.dim_keys
         self.output_keys = list(label_dict.keys())
+        if isinstance(criteria, str):
+            criteria = eval(criteria)
+
         input = time_geom.sample_interior(
-            data_cfg.batch_size * data_cfg.iters_per_epoch,
+            dataloader_cfg["batch_size"] * dataloader_cfg["iters_per_epoch"],
             criteria=criteria
         )
-        input = convert_to_dict(input, self.input_keys)
+        # input = convert_to_dict(input, self.input_keys)
 
         label = {}
         for key, value in label_dict.items():
+            if isinstance(value, str):
+                value = parse_expr(value)
             if isinstance(value, (int, float)):
                 label[key] = np.full_like(
                     next(iter(input.values())),
@@ -75,6 +84,8 @@ class InitialConstraint(Constraint):
         }
         if weight_dict is not None:
             for key, value in weight_dict.items():
+                if isinstance(value, str):
+                    value = parse_expr(value)
                 if isinstance(value, (int, float)):
                     weight[key] = np.full_like(
                         next(iter(label.values())),
@@ -98,7 +109,7 @@ class InitialConstraint(Constraint):
         dataset = NamedArrayDataset(input, label, weight)
         super().__init__(
             dataset,
-            data_cfg,
+            dataloader_cfg,
             loss,
             name
         )

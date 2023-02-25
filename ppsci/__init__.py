@@ -14,7 +14,7 @@
 
 from .arch import *
 from .constraint import *
-from .engine import *
+from .solver import *
 from .equation import *
 from .geometry import *
 from .loss import *

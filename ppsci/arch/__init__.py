@@ -12,4 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
+
 from .mlp import MLP
+
+__all__ = [
+    "MLP",
+    "build_model"
+]
+
+
+def build_model(cfg):
+    """Build model
+
+    Args:
+        cfg (AttrDict): Arch config.
+
+    Returns:
+        nn.Layer: Model.
+    """
+    cfg = deepcopy(cfg)
+    arch_cls = cfg.pop("name")
+    arch = eval(arch_cls)(**cfg)
+    return arch

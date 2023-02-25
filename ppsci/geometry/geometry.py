@@ -81,7 +81,7 @@ class Geometry(object):
                 raise RuntimeError(
                     f"sample interior failed"
                 )
-        return misc.convert_to_dict(x)
+        return misc.convert_to_dict(x, self.dim_keys)
 
     def sample_boundary(self, n: int, random: str="pseudo", criteria: Callable=None, evenly: bool=False):
         """Compute the random points in the geometry and return those meet criteria."""
