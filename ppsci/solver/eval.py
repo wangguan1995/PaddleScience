@@ -119,4 +119,5 @@ def eval_func(solver, epoch_id, log_freq):
             assert isinstance(tmp, (int, float)), \
                 f"target metric({type(tmp)}) must be a number"
             target_metric = tmp
+
     return target_metric
