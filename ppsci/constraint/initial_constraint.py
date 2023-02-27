@@ -30,10 +30,12 @@ class InitialConstraint(Constraint):
         self,
         label_expr,
         label_dict,
-        time_geom: TimeXGeometry,
-        criteria: Callable,
+        geom: TimeXGeometry,
         dataloader_cfg: AttrDict,
         loss,
+        random="pseudo",
+        criteria: Callable=None,
+        evenly=False,
         weight_dict=None,
         name="IC"
     ):
@@ -43,16 +45,17 @@ class InitialConstraint(Constraint):
                 self.label_expr[label_name] = parse_expr(label_expr)
 
         self.label_dict = label_dict
-        self.input_keys = time_geom.dim_keys
+        self.input_keys = geom.dim_keys
         self.output_keys = list(label_dict.keys())
         if isinstance(criteria, str):
             criteria = eval(criteria)
 
-        input = time_geom.sample_interior(
+        input = geom.sample_initial_interior(
             dataloader_cfg["batch_size"] * dataloader_cfg["iters_per_epoch"],
-            criteria=criteria
+            random,
+            criteria,
+            evenly
         )
-        # input = convert_to_dict(input, self.input_keys)
 
         label = {}
         for key, value in label_dict.items():
@@ -65,7 +68,7 @@ class InitialConstraint(Constraint):
                 )
             elif isinstance(value, sympy.Basic):
                 func = sympy.lambdify(
-                    sympy.Symbol(time_geom.dim_keys),
+                    sympy.Symbol(geom.dim_keys),
                     value,
                     "numpy"
                 )
@@ -93,7 +96,7 @@ class InitialConstraint(Constraint):
                     )
                 elif isinstance(value, sympy.Basic):
                     func = sympy.lambdify(
-                        [sympy.Symbol(k) for k in time_geom.dim_keys],
+                        [sympy.Symbol(k) for k in geom.dim_keys],
                         value,
                         "numpy"
                     )

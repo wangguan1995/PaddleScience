@@ -94,6 +94,7 @@ class Hypercube(Geometry):
 
     def random_points(self, n, random="pseudo"):
         x = sample(n, self.ndim, random)
+        # print(f"Hypercube's range: {self.__class__.__name__}", self.xmin, self.xmax)
         return (self.xmax - self.xmin) * x + self.xmin
 
     def random_boundary_points(self, n, random="pseudo"):

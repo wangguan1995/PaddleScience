@@ -17,3 +17,8 @@ class PDE(object):
         super().__init__()
         self.equations = {}
 
+    def __str__(self):
+        _str = "\n".join(
+            [f"{name}: {eq}" for name, eq in self.equations.items()]
+        )
+        return _str

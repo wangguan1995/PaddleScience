@@ -71,7 +71,7 @@ def load_pretrain(model, path):
 
 
 def load_checkpoint(path, model, optimizer=None):
-    """Load from checkpoint or pretrained_model
+    """Load from checkpoint.
 
     Args:
         path (AttrDict): Path for checkpoint.

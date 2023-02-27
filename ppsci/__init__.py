@@ -14,11 +14,14 @@
 
 from .arch import *
 from .constraint import *
-from .solver import *
+from .data import *
 from .equation import *
 from .geometry import *
+# from .gradient import *
 from .loss import *
-from .optimizer import *
-from .validate import *
 from .metric import *
+from .optimizer import *
+from .solver import *
+from .utils import *
+from .validate import *
 from .visualize import *

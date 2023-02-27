@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from copy import deepcopy
 
 from ..loss import build_loss
@@ -38,7 +39,7 @@ def build_validator(cfg, geom_dict):
     global_dataloader_cfg = cfg["dataloader"]
     validator_cfg = cfg["content"]
 
-    validator_dict = {}
+    validator_dict = OrderedDict()
     for _item in validator_cfg:
         validator_cls = next(iter(_item.keys()))
         _validator_cfg = _item[validator_cls]

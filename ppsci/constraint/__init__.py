@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from copy import deepcopy
 
 from ..loss import build_loss
@@ -44,7 +45,7 @@ def build_constraint(cfg, equation_dict, geom_dict):
     global_dataloader_cfg = cfg["dataloader"]
     constraint_cfg = cfg["content"]
 
-    constraint_dict = {}
+    constraint_dict = OrderedDict()
     for _item in constraint_cfg:
         constraint_cls = next(iter(_item.keys()))
         _constraint_cfg = _item[constraint_cls]

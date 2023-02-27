@@ -19,7 +19,7 @@ import sympy
 from sympy.parsing.sympy_parser import parse_expr
 
 from ..data.dataset import NamedArrayDataset
-from ..geometry import Geometry
+from ..geometry import Geometry, TimeXGeometry
 from ..utils.config import AttrDict
 from .base import Validator
 
@@ -32,8 +32,11 @@ class NumpyValidator(Validator):
         geom: Geometry,
         dataloader_cfg: AttrDict,
         loss,
+        random="pseudo",
         criteria: Callable=None,
+        evenly=False,
         metric=None,
+        with_initial=False,
         name=None,
     ):
         self.label_expr = label_expr
@@ -46,10 +49,26 @@ class NumpyValidator(Validator):
         self.output_keys = list(label_dict.keys())
         input = geom.sample_interior(
             dataloader_cfg["total_size"],
-            criteria=criteria
+            random,
+            criteria,
+            evenly
         )
-        # input = convert_to_dict(input, self.input_keys)
-
+        self.num_timestamp = 1
+        if with_initial and isinstance(geom, TimeXGeometry):
+            if geom.timedomain.num_timestamp is not None:
+                self.num_timestamp = geom.timedomain.num_timestamp
+                # exclude t0
+                nx = len(next(iter(input.values()))) // (geom.timedomain.num_timestamp - 1)
+                initial = geom.sample_initial_interior(
+                    nx,
+                    random,
+                    criteria,
+                    evenly
+                )
+                input = {
+                    key: np.vstack((initial[key], input[key]))
+                    for key in input
+                }
         label = {}
         for key, value in label_dict.items():
             if isinstance(value, (int, float)):

@@ -24,6 +24,7 @@ __all__ = [
     "build_loss",
 ]
 
+
 def build_loss(cfg):
     """Build loss.
 

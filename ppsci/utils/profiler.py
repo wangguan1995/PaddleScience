@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import sys
-
 import paddle
 
 # A global variable to record the number of calling times for profiler

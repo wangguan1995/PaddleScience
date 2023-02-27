@@ -36,7 +36,6 @@ __all__ = [
 ]
 
 
-
 def build_lr_scheduler(cfg, epochs, iters_per_epoch):
     """Build learning rate scheduler.
 
@@ -65,7 +64,7 @@ def build_optimizer(cfg, model_list, epochs, iters_per_epoch):
         iters_per_epoch (int): Number of iterations of one epoch.
 
     Returns:
-        Optimizer, LRScheduler: Learing rate scheduler.
+        Optimizer, LRScheduler: Optimizer and learing rate scheduler.
     """
     # build lr_scheduler
     cfg = deepcopy(cfg)

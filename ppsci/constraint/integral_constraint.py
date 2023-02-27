@@ -34,6 +34,8 @@ class IntegralrConstraint(Constraint):
         criteria: Callable,
         dataloader_cfg: AttrDict,
         loss,
+        random="pseudo",
+        evenly=False,
         weight_dict=None,
         name="IgC"
     ):
@@ -50,9 +52,10 @@ class IntegralrConstraint(Constraint):
 
         input = geom.sample_interior(
             dataloader_cfg["batch_size"] * dataloader_cfg["iters_per_epoch"],
-            criteria=criteria
+            random,
+            criteria,
+            evenly
         )
-        # input = convert_to_dict(input, self.input_keys)
 
         label = {}
         for key, value in label_dict.items():

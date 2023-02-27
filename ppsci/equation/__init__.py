@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from copy import deepcopy
 
 from .pde import NavierStokes
@@ -32,7 +33,7 @@ def build_equation(cfg):
         Dict[str, Equation]: Equation(s) in dict.
     """
     cfg = deepcopy(cfg)
-    eq_dict = {}
+    eq_dict = OrderedDict()
     for _item in cfg:
         eq_cls = next(iter(_item.keys()))
         eq_cfg = _item[eq_cls]

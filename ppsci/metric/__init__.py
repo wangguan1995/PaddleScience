@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from copy import deepcopy
 
 from .mae import MAE
@@ -27,6 +28,7 @@ __all__ = [
     "build_metric",
 ]
 
+
 def build_metric(cfg):
     """Build metric.
 
@@ -38,7 +40,7 @@ def build_metric(cfg):
     """
     cfg = deepcopy(cfg)
 
-    metric_dict = {}
+    metric_dict = OrderedDict()
     for _item in cfg:
         metric_cls = next(iter(_item.keys()))
         metric_cfg = _item.pop(metric_cls)

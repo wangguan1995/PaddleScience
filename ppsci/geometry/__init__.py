@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
+from copy import deepcopy
+
+from .geometry import Geometry
+from .geometry_1d import Interval
+from .geometry_2d import Disk, Polygon, Rectangle, Triangle
+from .geometry_3d import Cuboid, Sphere
+from .geometry_nd import Hypercube, Hypersphere
+from .mesh import Mesh
+from .timedomain import TimeDomain, TimeXGeometry
+
 __all__ = [
     "Cuboid",
     "Disk",
@@ -28,15 +39,6 @@ __all__ = [
     "Triangle",
     "build_geometry"
 ]
-from copy import deepcopy
-
-from .geometry import Geometry
-from .geometry_1d import Interval
-from .geometry_2d import Disk, Polygon, Rectangle, Triangle
-from .geometry_3d import Cuboid, Sphere
-from .geometry_nd import Hypercube, Hypersphere
-from .mesh import Mesh
-from .timedomain import TimeDomain, TimeXGeometry
 
 
 def build_geometry(cfg):
@@ -50,10 +52,18 @@ def build_geometry(cfg):
     """
     cfg = deepcopy(cfg)
 
-    geom_dict = {}
+    geom_dict = OrderedDict()
     for _item in cfg:
         geom_cls = next(iter(_item.keys()))
         geom_cfg = _item[geom_cls]
         geom_name = geom_cfg.pop("name", geom_cls)
-        geom_dict[geom_name] = eval(geom_cls)(**geom_cfg)
+        if geom_cls == "TimeXGeometry":
+            time_cfg = geom_cfg.pop("TimeDomain")
+            geom_cls = next(iter(geom_cfg.keys()))
+            geom_dict[geom_name] = TimeXGeometry(
+                TimeDomain(**time_cfg),
+                eval(geom_cls)(**geom_cfg[geom_cls])
+            )
+        else:
+            geom_dict[geom_name] = eval(geom_cls)(**geom_cfg)
     return geom_dict

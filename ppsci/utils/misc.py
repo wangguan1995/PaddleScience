@@ -15,7 +15,7 @@
 import numpy as np
 import paddle
 
-__all__ = ['AverageMeter', 'convert_to_dict', 'convert_to_array']
+__all__ = ['AverageMeter', 'convert_to_dict', 'convert_to_array', 'all_gather']
 
 
 class AverageMeter(object):
@@ -171,3 +171,20 @@ def convert_to_array(array, keys):
         [array[key] for key in keys],
         axis=-1
     )
+
+def all_gather(tensor, concat=True, axis=0):
+    """Gather tensor from all devices, concatenate them along given axis if specified.
+
+    Args:
+        tensor (paddle.Tensor): Tensor to be gathered from all GPUs.
+        concat (bool, optional): Whether to concatenate gathered Tensors. Defaults to True.
+        axis (int, optional): Axis which concatenated along. Defaults to 0.
+
+    Returns:
+        Union[paddle.Tensor, List[paddle.Tensor]]: Gathered Tensors
+    """
+    result = []
+    paddle.distributed.all_gather(result, tensor)
+    if concat:
+        return paddle.concat(result, axis)
+    return result

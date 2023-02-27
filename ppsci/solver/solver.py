@@ -22,6 +22,7 @@ import paddle.amp as amp
 import paddle.distributed as dist
 import ppsci
 from packaging.version import Version
+from paddle.distributed import fleet
 from ppsci.utils import config, logger
 from ppsci.utils.misc import AverageMeter
 from ppsci.utils.save_load import (load_checkpoint, load_pretrain,
@@ -39,16 +40,15 @@ class Solver(object):
     def __init__(self, cfg, mode="train"):
         self.cfg = cfg
         self.mode = mode
-        rank = dist.get_rank()
+        self.rank = dist.get_rank()
 
         # set random seed
         seed = self.cfg["Global"].get("seed", 42)
         if seed is not None and seed is not False:
-            assert isinstance(seed, int), \
-                f"Global.seed({seed}) must be a integer"
-            paddle.seed(seed + rank)
-            np.random.seed(seed + rank)
-            random.seed(seed + rank)
+            assert isinstance(seed, int), f"Global.seed({seed}) must be a integer"
+            paddle.seed(seed + self.rank)
+            np.random.seed(seed + self.rank)
+            random.seed(seed + self.rank)
 
         # init logger
         self.output_dir = self.cfg["Global"]["output_dir"]
@@ -63,29 +63,27 @@ class Solver(object):
 
         # init VisualDL
         self.vdl_writer = None
-        if rank == 0 and self.cfg["Global"]["use_visualdl"]:
+        if self.rank == 0 and self.cfg["Global"]["use_visualdl"]:
             vdl_writer_path = os.path.join(self.output_dir, "visualdl")
             os.makedirs(vdl_writer_path, exist_ok=True)
             self.vdl_writer = LogWriter(logdir=vdl_writer_path)
 
-        # set device
+        # set device and log with paddlepaddle' version
         assert self.cfg["Global"]["device"] in \
             ["cpu", "gpu", "xpu", "npu", "mlu", "ascend"]
         self.device = paddle.set_device(self.cfg["Global"]["device"])
-        version = paddle.__version__ \
-            if Version(paddle.__version__) != Version("0.0.0") else \
-                f"develop({paddle.version.commit[:7]})"
+        version = paddle.__version__
+        if Version(version) == Version("0.0.0"):
+            version = f"develop({paddle.version.commit[:7]})"
         logger.info(f"Using paddlepaddle {version} on device {self.device}")
 
         # build geometry(ies)
-        self.geom = ppsci.geometry.build_geometry(
-            self.cfg["Geometry"]
-        )
+        self.geom = ppsci.geometry.build_geometry(self.cfg["Geometry"])
 
         # build model
         self.model = ppsci.arch.build_model(self.cfg["Arch"])
 
-        # build equations
+        # build equation(s)
         self.equation = ppsci.equation.build_equation(self.cfg["Equation"])
 
         # init AMP
@@ -96,130 +94,8 @@ class Solver(object):
         else:
             self.amp_level = "O0"
 
-
-        # # build constraint(s)
-        # pde = ppsci.equation.pde.NavierStokes(nu=0.01, rho=1.0, dim=2, time=False)
-
-        # self.model.load_dict(paddle.load("output/ldc2d/epoch_200.pdparams"))
-
-
-        # interior_constraint = ppsci.constraint.InteriorConstraint(
-        #     pde.equations,
-        #     {"continuity": 0, "momentum_x": 0, "momentum_y": 0},
-        #     geo,
-        #     None,
-        #     config.AttrDict({
-        #         "batch_size":9801,
-        #         "iters_per_epoch":100,
-        #         "shuffle":True,
-        #         "drop_last":True,
-        #         "num_workers":2,
-        #         "seed":42,
-        #         "device":self.device,
-        #         "use_shared_memory":False
-        #     }),
-        #     ppsci.loss.MSELoss("sum"),
-        #     {"continuity": 1e-4, "momentum_x": 1e-4, "momentum_y": 1e-4}
-        # )
-
-        # x = sympy.Symbol("x")
-        # boundary_constraint_top = ppsci.constraint.BoundaryConstraint(
-        #     {"u": sympy.Symbol("u"), "v": sympy.Symbol("v")},
-        #     {"u": 1.0, "v": 0.0},
-        #     geo,
-        #     lambda x, y: np.isclose(y, 0.05),
-        #     config.AttrDict({
-        #         "batch_size": 101,
-        #         "iters_per_epoch": 100,
-        #         "shuffle": True,
-        #         "drop_last": True,
-        #         "num_workers": 2,
-        #         "seed": 42,
-        #         "device": self.device,
-        #         "use_shared_memory": True
-        #     }),
-        #     ppsci.loss.MSELoss("sum"),
-        #     {"u": 1.0 - 20.0 * sympy.Abs(x)},
-        #     name="BC_top"
-        # )
-        # boundary_constraint_down = ppsci.constraint.BoundaryConstraint(
-        #     {"u": sympy.Symbol("u"), "v": sympy.Symbol("v")},
-        #     {"u": 0.0, "v": 0.0},
-        #     geo,
-        #     lambda x, y: np.isclose(y, -0.05),
-        #     config.AttrDict({
-        #         "batch_size": 101,
-        #         "iters_per_epoch": 100,
-        #         "shuffle": True,
-        #         "drop_last": True,
-        #         "num_workers": 2,
-        #         "seed": 42,
-        #         "device": self.device,
-        #         "use_shared_memory": True
-        #     }),
-        #     ppsci.loss.MSELoss("sum"),
-        #     name="BC_down"
-        # )
-        # boundary_constraint_left = ppsci.constraint.BoundaryConstraint(
-        #     {"u": sympy.Symbol("u"), "v": sympy.Symbol("v")},
-        #     {"u": 0.0, "v": 0.0},
-        #     geo,
-        #     lambda x, y: np.isclose(x, -0.05),
-        #     config.AttrDict({
-        #         "batch_size": 99,
-        #         "iters_per_epoch": 100,
-        #         "shuffle": True,
-        #         "drop_last": True,
-        #         "num_workers": 2,
-        #         "seed": 42,
-        #         "device": self.device,
-        #         "use_shared_memory": True
-        #     }),
-        #     ppsci.loss.MSELoss("sum"),
-        #     name="BC_left"
-        # )
-        # boundary_constraint_right = ppsci.constraint.BoundaryConstraint(
-        #     {"u": sympy.Symbol("u"), "v": sympy.Symbol("v")},
-        #     {"u": 0.0, "v": 0.0},
-        #     geo,
-        #     lambda x, y: np.isclose(x, 0.05),
-        #     config.AttrDict({
-        #         "batch_size": 99,
-        #         "iters_per_epoch": 100,
-        #         "shuffle": True,
-        #         "drop_last": True,
-        #         "num_workers": 2,
-        #         "seed": 42,
-        #         "device": self.device,
-        #         "use_shared_memory": True
-        #     }),
-        #     ppsci.loss.MSELoss("sum"),
-        #     name="BC_right"
-        # )
-
-        # validator = ppsci.validate.NumpyValidator(
-        #     {"u": sympy.Symbol("u"), "v": sympy.Symbol("v")},
-        #     {"u": 0.0, "v": 0.0},
-        #     geo,
-        #     None,
-        #     config.AttrDict({
-        #         "total_size":12001,
-        #         "batch_size":12001,
-        #         "iters_per_epoch":1,
-        #         "shuffle":False,
-        #         "drop_last":False,
-        #         "num_workers":2,
-        #         "seed":42,
-        #         "device":self.device,
-        #         "use_shared_memory":False
-        #     }),
-        #     ppsci.loss.MSELoss("sum"),
-        #     ppsci.metric.RMSE()
-        # )
-        # self.validator = [
-        #     validator
-        # ]
-
+        # init world_size
+        self.world_size = dist.get_world_size()
 
     def train(self):
         """Training
@@ -233,21 +109,22 @@ class Solver(object):
         eval_freq = self.cfg["Global"].get("eval_freq", 1)
         start_eval_epoch = self.cfg["Global"].get("start_eval_epoch", 1)
 
-        # gradient accumulation
+        # init gradient accumulation config
         self.update_freq = self.cfg["Global"].get("update_freq", 1)
-        self.global_step = 0
 
         best_metric = {
             "metric": float("inf"),
             "epoch": 0,
         }
 
+        # init optimizer and lr scheduler
         self.optimizer, self.lr_scheduler = ppsci.optimizer.build_optimizer(
             self.cfg["Optimizer"],
             [self.model],
             epochs,
             self.iters_per_epoch
         )
+        # load checkpoint if specified
         if self.cfg["Global"]["checkpoints"] is not None:
             loaded_metric = load_checkpoint(
                 self.cfg["Global"]["checkpoints"],
@@ -257,6 +134,7 @@ class Solver(object):
             if isinstance(loaded_metric, dict):
                 best_metric.update(loaded_metric)
 
+        # init constraint(s)
         self.constraints = ppsci.constraint.build_constraint(
             self.cfg["Constraint"],
             self.equation,
@@ -276,10 +154,19 @@ class Solver(object):
         else:
             self.train_epoch_func = ppsci.solver.train.train_LBFGS_epoch_func
 
+        # init distributed environment
+        if self.world_size > 1:
+            # TODO(sensen): support different kind of DistributedStrategy
+            fleet.init(is_collective=True)
+            self.model = fleet.distributed_model(self.model)
+            self.optimizer = fleet.distributed_optimizer(self.optimizer)
+
         # train epochs
+        self.global_step = 0
         for epoch_id in range(1, epochs + 1):
             self.train_epoch_func(self, epoch_id, self.log_freq)
 
+            # log training summation at end of a epoch
             metric_msg = ", ".join(
                 [self.train_output_info[key].avg_info for key in self.train_output_info]
             )
@@ -287,8 +174,7 @@ class Solver(object):
             self.train_output_info.clear()
 
             # evaluate during training
-            if eval_during_train and \
-                    epoch_id % eval_freq == 0 and \
+            if eval_during_train and epoch_id % eval_freq == 0 and \
                     epoch_id >= start_eval_epoch:
                 cur_metric = self.eval(epoch_id)
                 if cur_metric < best_metric["metric"]:
@@ -312,10 +198,11 @@ class Solver(object):
                 self.vdl_writer
             )
 
+            # update learning rate by epoch
             if self.lr_scheduler.by_epoch:
                 self.lr_scheduler.step()
 
-            # save epoch model by save_freq
+            # save epoch model every `save_freq`
             if save_freq > 0 and epoch_id % save_freq == 0:
                 save_checkpoint(
                     self.model,
@@ -326,7 +213,7 @@ class Solver(object):
                     f"epoch_{epoch_id}"
                 )
 
-            # always save the latest model
+            # always save the latest model for convenient resume training
             save_checkpoint(
                 self.model,
                 self.optimizer,
@@ -351,7 +238,8 @@ class Solver(object):
         self.model.eval()
 
         self.eval_func = ppsci.solver.eval.eval_func
-        # for directly evaluation
+
+        # init validator(s) at the first time
         if not hasattr(self, "validator"):
             self.validator = ppsci.validate.build_validator(
                 self.cfg["Validator"],
@@ -394,9 +282,3 @@ class Solver(object):
         save_path = os.path.join(export_dir, "inference")
         paddle.jit.save(static_model, save_path)
         logger.info(f"The inference model has been exported to {export_dir}.")
-
-
-if __name__ == "__main__":
-    cfg = None
-    engine = Solver(cfg)
-    engine.train()
