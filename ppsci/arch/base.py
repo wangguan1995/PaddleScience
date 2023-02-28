@@ -53,3 +53,22 @@ class NetBase(nn.Layer):
 
     def register_output_transform(self, transform):
         self._output_transform = transform
+
+    def __str__(self):
+        num_fc = 0
+        num_conv = 0
+        num_bn = 0
+        for layer in self.sublayers(include_self=True):
+            if isinstance(layer, nn.Linear):
+                num_fc += 1
+            elif isinstance(layer, (nn.Conv2D, nn.Conv3D, nn.Conv1D)):
+                num_conv += 1
+            elif isinstance(layer, (nn.BatchNorm, nn.BatchNorm2D, nn.BatchNorm3D)):
+                num_bn += 1
+        _str = ", ".join([
+            f"num_fc = {num_fc}",
+            f"num_conv = {num_conv}",
+            f"num_bn = {num_bn}",
+            f"num_params = {self.num_params}",
+        ])
+        return _str

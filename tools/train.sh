@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 # for single card train
-export CUDA_VISIBLE_DEVICES=4
+export CUDA_VISIBLE_DEVICES=3
 # python3.7 tools/train.py -c ppsci/configs/ldc2d/ldc2d_steady.yaml
-python3.7 tools/train.py -c ppsci/configs/ldc2d/ldc2d_unsteady_time_even.yaml
+# python3.7 tools/train.py -c ppsci/configs/ldc2d/ldc2d_unsteady_time_even.yaml
+python3.7 tools/train.py -c ppsci/configs/poisson/poisson3d_robin.yaml
 
 # for 4-cards train
 # export CUDA_VISIBLE_DEVICES=0,1,2,3

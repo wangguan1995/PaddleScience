@@ -12,5 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .navier_stokes import NavierStokes
-from .poisson import Poisson
+import paddle.nn as nn
+
+
+class LossBase(nn.Layer):
+    """Base class for loss.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.__class__.__name__}, reduction = {self.reduction}"

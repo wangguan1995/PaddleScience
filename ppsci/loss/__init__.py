@@ -14,10 +14,13 @@
 
 from copy import deepcopy
 
+from .integral import IntegralLoss
 from .l1 import L1Loss
-from .mse import L2Loss, MSELoss
+from .l2 import L2Loss
+from .mse import MSELoss
 
 __all__ = [
+    "IntegralLoss",
     "L1Loss",
     "L2Loss",
     "MSELoss",

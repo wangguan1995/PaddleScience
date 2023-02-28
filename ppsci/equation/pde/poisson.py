@@ -20,15 +20,22 @@ class Poisson(PDE):
     """Poisson
 
     Args:
-        dim (_type_): _description_
+        dim (int): Number of dimension.
+        alpha (float): Alpha factor.
+        time (bool): Whther equation is time-dependent.
     """
-    def __init__(self, dim):
+    def __init__(self, dim, alpha, time):
+        self.alpha = alpha
+
+        t = sympy.Symbol("t")
         x = sympy.Symbol("x")
         y = sympy.Symbol("y")
         z = sympy.Symbol("z")
         invars = [x, y, z][: dim]
+        if time:
+            invars = [t] + invars
         u = sympy.Function("u")(*invars)
 
         super().__init__()
         self.equations["poisson"] = \
-            u.diff(x).diff(x) + u.diff(y).diff(y) + u.diff(z).diff(z)
+            u.diff(t) - self.alpha * (u.diff(x).diff(x) + u.diff(y).diff(y) + u.diff(z).diff(z))

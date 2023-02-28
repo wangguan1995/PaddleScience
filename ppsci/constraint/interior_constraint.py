@@ -22,7 +22,6 @@ from sympy.parsing.sympy_parser import parse_expr
 from ..data.dataset import NamedArrayDataset
 from ..geometry import Geometry
 from ..utils.config import AttrDict
-from ..utils.misc import convert_to_dict
 from .base import Constraint
 
 

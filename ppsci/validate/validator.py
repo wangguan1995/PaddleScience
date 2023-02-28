@@ -47,28 +47,55 @@ class NumpyValidator(Validator):
         self.label_dict = label_dict
         self.input_keys = geom.dim_keys
         self.output_keys = list(label_dict.keys())
-        input = geom.sample_interior(
-            dataloader_cfg["total_size"],
-            random,
-            criteria,
-            evenly
-        )
+
+        nx = dataloader_cfg["total_size"]
         self.num_timestamp = 1
-        if with_initial and isinstance(geom, TimeXGeometry):
+        # TODO(sensen): refine code below
+        if isinstance(geom, TimeXGeometry):
             if geom.timedomain.num_timestamp is not None:
-                self.num_timestamp = geom.timedomain.num_timestamp
                 # exclude t0
-                nx = len(next(iter(input.values()))) // (geom.timedomain.num_timestamp - 1)
-                initial = geom.sample_initial_interior(
-                    nx,
-                    random,
-                    criteria,
-                    evenly
+                if with_initial:
+                    self.num_timestamp = geom.timedomain.num_timestamp
+                    assert nx % self.num_timestamp == 0
+                    nx //= self.num_timestamp
+                    input = geom.sample_interior(
+                        nx * (geom.timedomain.num_timestamp - 1),
+                        random,
+                        criteria,
+                        evenly
+                    )
+                    initial = geom.sample_initial_interior(
+                        nx,
+                        random,
+                        criteria,
+                        evenly
+                    )
+                    input = {
+                        key: np.vstack((initial[key], input[key]))
+                        for key in input
+                    }
+                else:
+                    self.num_timestamp = geom.timedomain.num_timestamp - 1
+                    assert nx % self.num_timestamp == 0
+                    nx //= self.num_timestamp
+                    input = geom.sample_interior(
+                        nx * (geom.timedomain.num_timestamp - 1),
+                        random,
+                        criteria,
+                        evenly
+                    )
+            else:
+                raise NotImplementedError(
+                    f"TimeXGeometry with random timestamp not implemented yet."
                 )
-                input = {
-                    key: np.vstack((initial[key], input[key]))
-                    for key in input
-                }
+        else:
+            input = geom.sample_interior(
+                nx,
+                random,
+                criteria,
+                evenly
+            )
+
         label = {}
         for key, value in label_dict.items():
             if isinstance(value, (int, float)):

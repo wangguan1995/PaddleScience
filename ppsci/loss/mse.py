@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import paddle.nn as nn
 import paddle.nn.functional as F
 
+from .base import LossBase
 
-class MSELoss(nn.Layer):
+
+class MSELoss(LossBase):
     def __init__(self, reduction="mean"):
         super().__init__()
         assert reduction in ["mean", "sum"], \
@@ -25,11 +26,11 @@ class MSELoss(nn.Layer):
 
     def forward(self, output_dict, label_dict, weight_dict=None):
         losses = 0.0
-        for key in output_dict:
+        for key in label_dict:
             loss = F.mse_loss(
                 output_dict[key],
                 label_dict[key],
-                'none'
+                "none"
             )
             if weight_dict is not None:
                 loss *= weight_dict[key]
@@ -39,8 +40,3 @@ class MSELoss(nn.Layer):
                 loss = loss.mean()
             losses += loss
         return losses
-
-
-class L2Loss(MSELoss):
-    def __init__(self, reduction="mean"):
-        super().__init__(reduction)

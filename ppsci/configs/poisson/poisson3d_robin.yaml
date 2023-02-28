@@ -1,0 +1,122 @@
+# global configs
+Global:
+  checkpoints: null
+  pretrained_model: null
+  output_dir: ./output/
+  device: gpu
+  epochs: 100
+  iters_per_epoch: &iters_per_epoch 50
+  save_freq: 10
+  log_freq: 20
+  eval_during_train: True
+  eval_freq: 1
+  use_visualdl: False
+  save_inference_dir: ./inference
+  # to_static: False
+
+Geometry:
+  - TimeXGeometry:
+      name: &geom_name time_rect
+      TimeDomain:
+        t0: 0.1
+        t1: 1.5
+        time_step: 0.1
+      Sphere:
+        center: [0.0, 0.0, 0.0]
+        radius: 1.0
+
+Arch:
+  name: MLP
+  input_keys: ["t", "x", "y", "z"]
+  output_keys: ["u"]
+  num_layers: 4
+  hidden_size: 20
+  activation: tanh
+
+Optimizer:
+  name: Adam
+  lr:
+    name: Cosine
+    learning_rate: 0.001
+    warmup_epoch: 6
+
+# AMP:
+#   init_loss_scaling: 65536
+#   use_dynamic_loss_scaling: True
+#   level: O2
+
+Equation:
+  - Poisson:
+      dim: 3
+      alpha: 0.1
+      time: True
+
+Constraint:
+  dataloader:
+    iters_per_epoch: *iters_per_epoch
+    shuffle: True
+    drop_last: False
+    num_workers: 3
+    seed: 42
+    use_shared_memory: False
+  content:
+    - InteriorConstraint:
+        name: EQ
+        label_expr: Poisson
+        label_dict: { "poisson": 1.0 }
+        geom: *geom_name
+        dataloader:
+          batch_size: 11200
+        loss:
+          name: MSELoss
+          reduction: mean
+    - BoundaryConstraint:
+        name: BC
+        label_expr:
+          {
+            "Robin": "1.0*u+1.0*(Derivative(u, x)*normal_x+Derivative(u, y)*normal_y+Derivative(u, z)*normal_z)",
+          }
+        label_dict: { "Robin": 1.0 }
+        geom: *geom_name
+        criteria: null
+        dataloader:
+          batch_size: 1120
+        loss:
+          name: MSELoss
+          reduction: mean
+        weight_dict: { "Robin": 10.0 }
+    - InitialConstraint:
+        name: IC
+        label_expr: { "u": "u" }
+        label_dict: { "u": 0.0 }
+        geom: *geom_name
+        dataloader:
+          batch_size: 40000
+        loss:
+          name: MSELoss
+          reduction: mean
+        weight_dict: { "u": 10.0 }
+
+Validator:
+  dataloader:
+    shuffle: False
+    drop_last: False
+    num_workers: 0
+    seed: 42
+    use_shared_memory: False
+  content:
+    - NumpyValidator:
+        name: Residual
+        label_expr: { "u": "u", "poisson": Poisson }
+        label_dict: { "u": 1.0, "poisson": 1.0 }
+        geom: time_rect
+        dataloader:
+          total_size: 600000
+          batch_size: 60000
+        loss:
+          name: MSELoss
+          reduction: mean
+        metric:
+          - MSE: {}
+        with_initial: True
+# Infer: TODO...

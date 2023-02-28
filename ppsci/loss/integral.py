@@ -17,7 +17,7 @@ import paddle.nn.functional as F
 from .base import LossBase
 
 
-class L1Loss(LossBase):
+class IntegralLoss(LossBase):
     def __init__(self, reduction="mean"):
         super().__init__()
         assert reduction in ["mean", "sum"], \
@@ -27,9 +27,9 @@ class L1Loss(LossBase):
     def forward(self, output_dict, label_dict, weight_dict=None):
         losses = 0.0
         for key in label_dict:
-            loss = F.l1_loss(
+            loss = F.mse_loss(
                 output_dict[key],
-                label_dict[key],
+                (label_dict[key] * output_dict["area"]).sum(axis=1),
                 "none"
             )
             if weight_dict is not None:
@@ -40,4 +40,5 @@ class L1Loss(LossBase):
                 loss = loss.mean()
             losses += loss
         return losses
+
 

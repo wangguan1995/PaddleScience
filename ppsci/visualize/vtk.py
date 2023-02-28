@@ -57,8 +57,8 @@ def save_vtk_from_dict(filename, data_dict, coord_keys, value_keys, num_timestam
         num_timestamp (int, optional): Number of timestamp in data_dict. Defaults to 1.
     """
     ndim = len(coord_keys)
-    assert ndim in [2, 3], \
-        f"ndim({ndim}) must be 2 or 3"
+    assert ndim in [2, 3, 4], \
+        f"ndim({ndim}) must be 2, 3 or 4"
 
     ntotal = len(next(iter(data_dict.values())))
     nx = ntotal // num_timestamp
@@ -73,6 +73,7 @@ def save_vtk_from_dict(filename, data_dict, coord_keys, value_keys, num_timestam
         for i in range(len(coord)):
             if isinstance(coord[i], paddle.Tensor):
                 coord[i] = coord[i].numpy()
+            coord[i] = np.ascontiguousarray(coord[i])
         if len(coord) == 2:
             # use 0 matrix for z-axis coord
             coord.append(np.full_like(coord[-1], 0))
@@ -81,7 +82,10 @@ def save_vtk_from_dict(filename, data_dict, coord_keys, value_keys, num_timestam
         }
         for key in value:
             if isinstance(value[key], paddle.Tensor):
-                value[key] = value[key].numpy().reshape([-1])
-
-        filename_t = f"{filename}_t-{t}"
+                value[key] = value[key].numpy()
+            value[key] = np.ascontiguousarray(value[key].flatten())
+        if num_timestamp > 1:
+            filename_t = f"{filename}_t-{t}"
+        else:
+            filename_t = filename
         pointsToVTK(filename_t, *coord, data=value)

@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
+from typing import Callable
 
 import numpy as np
 import pymesh
 import pysdf
 
+from ..utils import misc
 from .geometry import Geometry
 from .inflation import pymesh_inflation
 from .sampler import sample
@@ -37,6 +38,14 @@ class Mesh(Geometry):
             self.py_mesh = mesh
         else:
             raise ValueError(f"type of mesh({type(mesh)} must be str or pymesh.Mesh")
+
+        if "face_normal" not in self.py_mesh.get_attribute_names():
+            self.py_mesh.add_attribute("face_normal")
+        self.face_normal = self.py_mesh.get_attribute("face_normal").reshape([-1, 3])
+
+        if "face_area" not in self.py_mesh.get_attribute_names():
+            self.py_mesh.add_attribute("face_area")
+        self.face_area = self.py_mesh.get_attribute("face_area").reshape([-1])
 
         self.vertices = self.py_mesh.vertices
         self.faces = self.py_mesh.faces
@@ -143,14 +152,14 @@ class Mesh(Geometry):
                 inflated_mesh.v1,
                 inflated_mesh.v2
             )
-            triangle_probabilities = triangle_areas / np.linalg.norm(triangle_areas, ord=1)
-            triangle_index = np.arange(triangle_probabilities.shape[0])
+            triangle_prob = triangle_areas / np.linalg.norm(triangle_areas, ord=1)
+            triangle_index = np.arange(triangle_prob.shape[0])
             points_per_triangle = np.random.choice(
-                triangle_index, _n, p=triangle_probabilities
+                triangle_index, _n, p=triangle_prob
             )
             points_per_triangle, _ = np.histogram(
                 points_per_triangle,
-                np.arange(triangle_probabilities.shape[0] + 1) - 0.5
+                np.arange(triangle_prob.shape[0] + 1) - 0.5
             )
 
             inflated_boundary_points = []
@@ -176,15 +185,17 @@ class Mesh(Geometry):
             self.v1,
             self.v2
         )
-        triangle_probabilities = triangle_areas / np.linalg.norm(triangle_areas, ord=1)
-        triangle_index = np.arange(triangle_probabilities.shape[0])
-        points_per_triangle = np.random.choice(triangle_index, n, p=triangle_probabilities)
+        triangle_prob = triangle_areas / np.linalg.norm(triangle_areas, ord=1)
+        triangle_index = np.arange(triangle_prob.shape[0])
+        points_per_triangle = np.random.choice(triangle_index, n, p=triangle_prob)
         points_per_triangle, _ = np.histogram(
             points_per_triangle,
-            np.arange(triangle_probabilities.shape[0] + 1) - 0.5
+            np.arange(triangle_prob.shape[0] + 1) - 0.5
         )
 
         all_points = []
+        all_normal = []
+        all_area = []
         for index, nr_p in enumerate(points_per_triangle):
             if nr_p == 0:
                 continue
@@ -195,9 +206,58 @@ class Mesh(Geometry):
                 nr_p,
                 random
             )
+            normal = np.tile(self.face_normal[index], [nr_p, 1])
+            area = np.full([nr_p, 1], self.face_area[index])
             all_points.append(sampled_points)
+            all_normal.append(normal)
+            all_area.append(area)
 
-        return np.concatenate(all_points, axis=0)
+        all_points = np.concatenate(all_points, axis=0)
+        all_normal = np.concatenate(all_normal, axis=0)
+        all_area = np.concatenate(all_area, axis=0)
+        return all_points, all_normal, all_area
+
+    def sample_boundary(self, n, random="pseudo", criteria=None, evenly=False):
+        # TODO(sensen): support for time-dependent points(repeat data in time)
+        x = np.empty(shape=(n, self.ndim), dtype="float32")
+        _size, _ntry, _nsuc = 0, 0, 0
+        while _size < n:
+            if evenly:
+                raise ValueError(
+                    f"Can't sample evenly on mesh now, please set evenly=False."
+                )
+                # points, normal, area = self.uniform_boundary_points(n, False)
+            else:
+                points, normal, area = self.random_boundary_points(n, random)
+
+            if criteria is not None:
+                criteria_mask = criteria(*np.split(points, self.ndim, axis=1)).flatten()
+                points = points[criteria_mask]
+
+            if len(points) > n - _size:
+                points = points[:n - _size]
+            x[_size:_size + len(points)] = points
+
+            _size += len(points)
+            _ntry += 1
+            if len(points) > 0:
+                _nsuc += 1
+
+            if _ntry >= 1000 and _nsuc == 0:
+                raise RuntimeError(
+                    f"sample boundary failed"
+                )
+
+        normal_dict = misc.convert_to_dict(
+            normal,
+            [f"normal_{key}" for key in self.dim_keys if key != "t"]
+        )
+        area_dict = misc.convert_to_dict(
+            area,
+            ["area"]
+        )
+        x_dict = misc.convert_to_dict(x, self.dim_keys)
+        return {**x_dict, **normal_dict, **area_dict}
 
     def union(self, rhs):
         csg = pymesh.CSGTree({

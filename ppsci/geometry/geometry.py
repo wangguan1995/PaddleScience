@@ -17,7 +17,6 @@ Code below is heavily based on https://github.com/lululxvi/deepxde
 """
 
 import abc
-from typing import Callable
 
 import numpy as np
 
@@ -29,8 +28,6 @@ class Geometry(object):
         self.ndim = ndim
         self.bbox = bbox
         self.diam = min(diam, np.linalg.norm(bbox[1] - bbox[0]))
-        # self.sample_config = {}
-        # self.batch_data_dict = {}
 
     @property
     def dim_keys(self):
@@ -54,7 +51,7 @@ class Geometry(object):
               f"Use random_points instead.")
         return self.random_points(n)
 
-    def sample_interior(self, n: int, random: str="pseudo", criteria: Callable=None, evenly: bool=False):
+    def sample_interior(self, n, random="pseudo", criteria=None, evenly=False):
         """Sample random points in the geometry and return those meet criteria."""
         x = np.empty(shape=(n, self.ndim), dtype="float32")
         _size, _ntry, _nsuc = 0, 0, 0
@@ -83,13 +80,13 @@ class Geometry(object):
                 )
         return misc.convert_to_dict(x, self.dim_keys)
 
-    def sample_boundary(self, n: int, random: str="pseudo", criteria: Callable=None, evenly: bool=False):
+    def sample_boundary(self, n, random="pseudo", criteria=None, evenly=False):
         """Compute the random points in the geometry and return those meet criteria."""
         x = np.empty(shape=(n, self.ndim), dtype="float32")
         _size, _ntry, _nsuc = 0, 0, 0
         while _size < n:
             if evenly:
-                points = self.uniform_boundary_points(n, False)
+                points = self.uniform_boundary_points(n, True)
             else:
                 points = self.random_boundary_points(n, random)
 
@@ -110,14 +107,13 @@ class Geometry(object):
                 raise RuntimeError(
                     f"sample boundary failed"
                 )
-        x_normal = self.boundary_normal(x)
-
-        x_dict = misc.convert_to_dict(x, self.dim_keys)
-        x_normal_dict = misc.convert_to_dict(
-            x_normal,
-            [f"normal_{key}" for key in self.dim_keys]
+        normal = self.boundary_normal(x)
+        normal_dict = misc.convert_to_dict(
+            normal[:, 1:],
+            [f"normal_{key}" for key in self.dim_keys if key != "t"]
         )
-        return {**x_dict, **x_normal_dict}
+        x_dict = misc.convert_to_dict(x, self.dim_keys)
+        return {**x_dict, **normal_dict}
 
     @abc.abstractmethod
     def random_points(self, n: int, random: str="pseudo"):
@@ -175,4 +171,10 @@ class Geometry(object):
 
     def __str__(self) -> str:
         """Return the name of class"""
-        return self.__class__.__name__
+        _str = ", ".join([
+            f"ndim = {self.ndim}",
+            f"bbox = {self.bbox}",
+            f"diam = {self.diam}",
+            f"dim_keys = {self.dim_keys}"
+        ])
+        return _str

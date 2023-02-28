@@ -19,7 +19,6 @@ from .lr_scheduler import (ConstLR, Cosine, Linear, MultiStepDecay, Piecewise,
 from .optimizer import SGD, Adam, AdamW, Momentum, RMSProp
 
 __all__ = [
-    "build_optimizer",
     "ConstLR",
     "Cosine",
     "Linear",

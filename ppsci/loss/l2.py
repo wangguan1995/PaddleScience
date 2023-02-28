@@ -12,5 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .navier_stokes import NavierStokes
-from .poisson import Poisson
+import paddle.nn.functional as F
+
+from .base import LossBase
+
+
+class L2Loss(LossBase):
+    def __init__(self):
+        super().__init__()
+        self.reduction = "sum"
+
+    def forward(self, output_dict, label_dict, weight_dict=None):
+        losses = 0.0
+        for key in label_dict:
+            loss = F.mse_loss(
+                output_dict[key],
+                label_dict[key],
+                "none"
+            )
+            if weight_dict is not None:
+                loss *= weight_dict[key]
+            loss = loss.sum()
+            losses += loss
+        return losses

@@ -83,3 +83,14 @@ class Constraint:
         self.data_iter = iter(self.data_loader)
         self.loss = loss
         self.name = name
+
+    def __str__(self):
+        _str = ", ".join([
+            f"alias_name = {self.name}",
+            f"input_keys = {self.input_keys}",
+            f"output_keys = {self.output}",
+            f"label_expr = {self.label_expr}",
+            f"label_dict = {self.label_dict}",
+            f"loss = {self.loss.__class__.__name__}",
+        ])
+        return _str

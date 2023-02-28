@@ -124,6 +124,7 @@ class Solver(object):
             epochs,
             self.iters_per_epoch
         )
+
         # load checkpoint if specified
         if self.cfg["Global"]["checkpoints"] is not None:
             loaded_metric = load_checkpoint(
@@ -191,12 +192,7 @@ class Solver(object):
             logger.info(
                 f"[Eval][Epoch {epoch_id}][best metric: {best_metric['metric']}]"
             )
-            logger.scaler(
-                "eval_metric",
-                cur_metric,
-                epoch_id,
-                self.vdl_writer
-            )
+            logger.scaler( "eval_metric", cur_metric, epoch_id, self.vdl_writer)
 
             # update learning rate by epoch
             if self.lr_scheduler.by_epoch:
@@ -220,7 +216,7 @@ class Solver(object):
                 {"metric": cur_metric, "epoch": epoch_id},
                 self.output_dir,
                 self.cfg["Arch"]["name"],
-                "latest",
+                "latest"
             )
 
         # close VisualDL
@@ -234,16 +230,17 @@ class Solver(object):
         if self.cfg["Global"]["pretrained_model"] is not None:
             load_pretrain(self.model, self.cfg["Global"]["pretrained_model"])
 
-        # init train func
         self.model.eval()
 
+        # init train func
         self.eval_func = ppsci.solver.eval.eval_func
 
         # init validator(s) at the first time
         if not hasattr(self, "validator"):
             self.validator = ppsci.validate.build_validator(
                 self.cfg["Validator"],
-                self.geom
+                self.geom,
+                self.equation,
             )
 
         self.eval_output_info = {}

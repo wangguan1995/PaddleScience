@@ -19,9 +19,9 @@ import sympy
 from sympy.parsing.sympy_parser import parse_expr
 
 from ..data.dataset import NamedArrayDataset
-from ..geometry import Geometry
+from ..geometry import Mesh
 from ..utils.config import AttrDict
-from ..utils.misc import convert_to_dict
+from ..utils.misc import stack_dict_list
 from .base import Constraint
 
 
@@ -30,7 +30,7 @@ class IntegralrConstraint(Constraint):
         self,
         label_expr,
         label_dict,
-        geom: Geometry,
+        geom: Mesh,
         criteria: Callable,
         dataloader_cfg: AttrDict,
         loss,
@@ -46,48 +46,30 @@ class IntegralrConstraint(Constraint):
 
         self.label_dict = label_dict
         self.input_keys = geom.dim_keys
-        self.output_keys = list(label_dict.keys())
+        # "area" will be kept in "output_dict" as `IntegralLoss` argument.
+        self.output_keys = list(label_dict.keys()) + ["area"]
         if isinstance(criteria, str):
             criteria = eval(criteria)
 
-        input = geom.sample_interior(
-            dataloader_cfg["batch_size"] * dataloader_cfg["iters_per_epoch"],
-            random,
-            criteria,
-            evenly
-        )
+        # integral sample
+        input_list = []
+        label_list = []
+        weight_list = []
+        for _ in range(
+            dataloader_cfg["batch_size"] * dataloader_cfg["iters_per_epoch"]
+        ):
+            input = geom.sample_boundary(
+                dataloader_cfg["integral_batch_size"],
+                random,
+                criteria,
+                evenly
+            )
 
-        label = {}
-        for key, value in label_dict.items():
-            if isinstance(value, (int, float)):
-                label[key] = np.full_like(
-                    next(iter(input.values())),
-                    float(value)
-                )
-            elif isinstance(value, sympy.Basic):
-                func = sympy.lambdify(
-                    sympy.Symbol(geom.dim_keys),
-                    value,
-                    "numpy"
-                )
-                label[key] = func(**input)
-            else:
-                raise NotImplementedError(
-                    f"type of {type(value)} is invalid yet."
-                )
-
-        weight = {
-            key: np.ones_like(next(iter(label.values())))
-            for key in label
-        }
-        if weight_dict is not None:
-            for key in weight_dict:
-                if isinstance(value, str):
-                    value = parse_expr(value)
-
+            label = {}
+            for key, value in label_dict.items():
                 if isinstance(value, (int, float)):
-                    weight[key] = np.full_like(
-                        next(iter(label.values())),
+                    label[key] = np.full_like(
+                        next(iter(input.values())),
                         float(value)
                     )
                 elif isinstance(value, sympy.Basic):
@@ -96,11 +78,46 @@ class IntegralrConstraint(Constraint):
                         value,
                         "numpy"
                     )
-                    weight[key] = func(**input)
+                    label[key] = func(**input)
                 else:
                     raise NotImplementedError(
                         f"type of {type(value)} is invalid yet."
                     )
+
+            weight = {
+                key: np.ones_like(next(iter(label.values())))
+                for key in label
+            }
+            if weight_dict is not None:
+                for key in weight_dict:
+                    if isinstance(value, str):
+                        value = parse_expr(value)
+
+                    if isinstance(value, (int, float)):
+                        weight[key] = np.full_like(
+                            next(iter(label.values())),
+                            float(value)
+                        )
+                    elif isinstance(value, sympy.Basic):
+                        func = sympy.lambdify(
+                            sympy.Symbol(geom.dim_keys),
+                            value,
+                            "numpy"
+                        )
+                        weight[key] = func(**input)
+                    else:
+                        raise NotImplementedError(
+                            f"type of {type(value)} is invalid yet."
+                        )
+            input_list.append(input)
+            label_list.append(label)
+            weight_list.append(weight)
+
+        # [batch_size, integral_batch_size, ndim]
+        input = stack_dict_list(input_list)
+        label = stack_dict_list(label_list)
+        weight = stack_dict_list(weight_list)
+
         dataset = NamedArrayDataset(input, label, weight)
         super().__init__(
             dataset,

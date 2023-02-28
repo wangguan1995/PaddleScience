@@ -79,6 +79,10 @@ class ExpressionSolver(paddle.nn.Layer):
                 if out_name not in self.output_dict:
                     self.output_dict[out_name] = der
                 return der
+            else:
+                raise NotImplementedError(
+                    f"Derivative order({order}) >=3 not implemented yet"
+                )
         elif isinstance(f, sympy.Number):
             return float(f)
         elif isinstance(f, sympy.Add):
@@ -89,7 +93,10 @@ class ExpressionSolver(paddle.nn.Layer):
             return out
         elif isinstance(f, sympy.Mul):
             results = [self.solve_expr(arg) for arg in f.args]
-            return results[0] * results[1]
+            out = results[0]
+            for i in range(1, len(results)):
+                out = out * results[i]
+            return out
         elif isinstance(f, sympy.Pow):
             results = [self.solve_expr(arg) for arg in f.args]
             return results[0] ** results[1]

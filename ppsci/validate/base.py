@@ -13,13 +13,10 @@
 # limitations under the License.
 
 import random
-from functools import partial
 
 import numpy as np
 import paddle.distributed as dist
 from paddle.io import BatchSampler, DataLoader, DistributedBatchSampler
-
-from ..data.dataloader import InfiniteDataLoader
 
 
 def worker_init_fn(worker_id: int, num_workers: int, rank: int, seed: int):

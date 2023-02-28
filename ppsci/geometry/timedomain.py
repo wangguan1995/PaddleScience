@@ -60,9 +60,9 @@ class TimeXGeometry(Geometry):
         return self.timedomain.on_initial(x[:, :1])
 
     def boundary_normal(self, x):
-        # [N, xyz]
+        # x: [N, txy(z)]
         normal = self.geometry.boundary_normal(x[:, 1:])
-        return np.hstack((np.zeros([len(normal), 1]), normal))
+        return np.hstack((x[:, :1], normal))
 
     def uniform_points(self, n, boundary=True):
         """Uniform points on the spatio-temporal domain.
@@ -179,10 +179,10 @@ class TimeXGeometry(Geometry):
             num=nt,
             endpoint=False,
             dtype="float32"
-        )
+        )[:, None][::-1]
         xt = []
         for ti in t:
-            xt.append(np.hstack((np.full([nx, 1], ti), x)))
+            xt.append(np.hstack((np.full([nx, 1], ti[0]), x)))
         xt = np.vstack(xt)
         if len(xt) > n:
             xt = xt[:n]
@@ -198,12 +198,14 @@ class TimeXGeometry(Geometry):
                 num=nt,
                 endpoint=False,
                 dtype="float32"
-            )
+            )[:, None][::-1]
             nx = int(np.ceil(n / nt))
             x = self.geometry.random_boundary_points(nx, random=random)
+            # TODO(sensen): decouple uniform and random boundary sample.
+            # x = self.geometry.uniform_boundary_points(nx)
             xt = []
             for ti in t:
-                xt.append(np.hstack((np.full([nx, 1], ti), x)))
+                xt.append(np.hstack((np.full([nx, 1], ti[0]), x)))
             xt = np.vstack(xt)
             if len(xt) > n:
                 xt = xt[:n]
@@ -218,7 +220,7 @@ class TimeXGeometry(Geometry):
         t = self.timedomain.t0
         if len(x) > n:
             x = x[:n]
-        return np.hstack((np.full([len(x), 1], t, dtype="float32"), x))
+        return np.hstack((np.full([n, 1], t, dtype="float32"), x))
 
     def random_initial_points(self, n, random="pseudo"):
         x = self.geometry.random_points(n, random=random)

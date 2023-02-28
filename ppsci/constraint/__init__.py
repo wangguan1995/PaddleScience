@@ -50,6 +50,7 @@ def build_constraint(cfg, equation_dict, geom_dict):
         constraint_cls = next(iter(_item.keys()))
         _constraint_cfg = _item[constraint_cls]
         constraint_name = _constraint_cfg.get("name", constraint_cls)
+
         # select equation
         if isinstance(_constraint_cfg["label_expr"], str):
             equation_name = _constraint_cfg.pop("label_expr")

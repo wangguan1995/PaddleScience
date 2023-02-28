@@ -25,12 +25,13 @@ __all__ = [
 ]
 
 
-def build_validator(cfg, geom_dict):
+def build_validator(cfg, geom_dict, equation_dict):
     """Build validator(s).
 
     Args:
         cfg (List[AttrDict]): Validator(s) config list.
         geom_dict (Dct[str, Geometry]): Geometry(ies) in dict.
+        equation_dict (Dct[str, Equation]): Equation(s) in dict.
 
     Returns:
         Dict[str, Validator]: Validator(s) in dict.
@@ -51,6 +52,12 @@ def build_validator(cfg, geom_dict):
         # update complete dataloader config
         local_dataloader_cfg = _validator_cfg["dataloader"]
         local_dataloader_cfg.update(global_dataloader_cfg)
+
+        # select equation
+        for name, expr in _validator_cfg["label_expr"].items():
+            if isinstance(expr, str) and expr in equation_dict:
+                _validator_cfg["label_expr"][name] = \
+                    equation_dict[expr].equations[name]
 
         # build loss
         _validator_cfg["loss"] = build_loss(_validator_cfg["loss"])

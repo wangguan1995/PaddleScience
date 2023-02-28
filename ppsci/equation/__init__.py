@@ -15,10 +15,11 @@
 from collections import OrderedDict
 from copy import deepcopy
 
-from .pde import NavierStokes
+from .pde import NavierStokes, Poisson
 
 __all__ = [
     "NavierStokes",
+    "Poisson",
     "build_equation"
 ]
 
