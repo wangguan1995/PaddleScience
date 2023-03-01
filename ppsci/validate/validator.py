@@ -53,10 +53,10 @@ class NumpyValidator(Validator):
         # TODO(sensen): refine code below
         if isinstance(geom, TimeXGeometry):
             if geom.timedomain.num_timestamp is not None:
-                # exclude t0
                 if with_initial:
                     self.num_timestamp = geom.timedomain.num_timestamp
-                    assert nx % self.num_timestamp == 0
+                    assert nx % self.num_timestamp == 0, \
+                        f"{nx} % {self.num_timestamp} != 0"
                     nx //= self.num_timestamp
                     input = geom.sample_interior(
                         nx * (geom.timedomain.num_timestamp - 1),
@@ -75,8 +75,10 @@ class NumpyValidator(Validator):
                         for key in input
                     }
                 else:
+                    # exclude t0
                     self.num_timestamp = geom.timedomain.num_timestamp - 1
-                    assert nx % self.num_timestamp == 0
+                    assert nx % self.num_timestamp == 0, \
+                        f"{nx} % {self.num_timestamp} != 0"
                     nx //= self.num_timestamp
                     input = geom.sample_interior(
                         nx * (geom.timedomain.num_timestamp - 1),

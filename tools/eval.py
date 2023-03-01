@@ -25,5 +25,7 @@ if __name__ == "__main__":
     args = config.parse_args()
     cfg = config.get_config(args.config, overrides=args.override, show=False)
     cfg.profiler_options = args.profiler_options
-    engine = Solver(cfg, mode="eval")
-    engine.eval()
+
+    solver = Solver()
+    solver.initialize_from_config(cfg, mode="eval")
+    solver.eval()

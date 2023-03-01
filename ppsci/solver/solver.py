@@ -37,7 +37,10 @@ class Solver(object):
         cfg (AttrDict): Configuration parsed from yaml.
         mode (str, optional): Running mode. Defaults to "train".
     """
-    def __init__(self, cfg, mode="train"):
+    def __init__(self):
+        pass
+
+    def initialize_from_config(self, cfg, mode="train"):
         self.cfg = cfg
         self.mode = mode
         self.rank = dist.get_rank()

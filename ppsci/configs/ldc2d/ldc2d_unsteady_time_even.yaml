@@ -143,7 +143,7 @@ Validator:
         label_dict: { "u": 0, "v": 0 }
         geom: *geom_name
         dataloader:
-          total_size: 5120
+          total_size: 6144
           batch_size: 1024
         loss:
           name: MSELoss
