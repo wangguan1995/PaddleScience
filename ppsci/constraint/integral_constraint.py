@@ -46,7 +46,7 @@ class IntegralrConstraint(Constraint):
 
         self.label_dict = label_dict
         self.input_keys = geom.dim_keys
-        # "area" will be kept in "output_dict" as `IntegralLoss` argument.
+        # "area" will be kept in "output_dict" for computation in `IntegralLoss`.
         self.output_keys = list(label_dict.keys()) + ["area"]
         if isinstance(criteria, str):
             criteria = eval(criteria)

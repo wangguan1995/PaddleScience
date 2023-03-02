@@ -13,3 +13,7 @@
 # limitations under the License.
 
 from .array_dataset import NamedArrayDataset
+
+__all__ = [
+    "NamedArrayDataset"
+]

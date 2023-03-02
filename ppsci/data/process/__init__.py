@@ -11,15 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-class PDE(object):
-    def __init__(self):
-        super().__init__()
-        self.equations = {}
-
-    def __str__(self):
-        _str = "\n".join(
-            [self.__class__.__name__] +
-            [f"{name}: {eq}" for name, eq in self.equations.items()]
-        )
-        return _str

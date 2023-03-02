@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable
-
 import paddle
 import paddle.nn.functional as F
 
@@ -28,7 +26,7 @@ act_func_dict = {
     "tanh": F.tanh,
 }
 
-def get_activation(act_name: str) -> Callable:
+def get_activation(act_name):
     assert act_name in act_func_dict, \
         f"act_name({act_name}) not found in act_func_dict"
     return act_func_dict[act_name]

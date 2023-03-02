@@ -56,7 +56,7 @@ class LRBase(object):
         """
         super(LRBase, self).__init__()
         if warmup_epoch >= epochs:
-            msg = f"When using warm up, the value of \"Global.epochs\" must be greater than value of \"Optimizer.lr.warmup_epoch\". The value of \"Optimizer.lr.warmup_epoch\" has been set to {epochs}."
+            msg = f"When using warm up, the value of \"Global.epochs\" should be greater than value of \"Optimizer.lr.warmup_epoch\". The value of \"Optimizer.lr.warmup_epoch\" has been set to {epochs}."
             logger.warning(msg)
             warmup_epoch = epochs
         self.epochs = epochs
@@ -360,7 +360,7 @@ class MultiStepDecay(LRBase):
         epochs (int): total epoch(s)
         iters_per_epoch (int): number of iterations within an epoch
         learning_rate (float): learning rate
-        milestones (List[int]): List of each boundaries. Must be increasing.
+        milestones (List[int]): List of each boundaries. should be increasing.
         gamma (float, optional): The Ratio that the learning rate will be reduced. ``new_lr = origin_lr * gamma``. It should be less than 1.0. Defaults to 0.1.
         warmup_epoch (int, optional): The epoch numbers for LinearWarmup. Defaults to 0.
         warmup_start_lr (float, optional): start learning rate within warmup. Defaults to 0.0.

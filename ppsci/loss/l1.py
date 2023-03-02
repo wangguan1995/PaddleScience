@@ -21,7 +21,7 @@ class L1Loss(LossBase):
     def __init__(self, reduction="mean"):
         super().__init__()
         assert reduction in ["mean", "sum"], \
-            f"reduction must be 'mean' or 'sum', but got {reduction}"
+            f"reduction should be 'mean' or 'sum', but got {reduction}"
         self.reduction = reduction
 
     def forward(self, output_dict, label_dict, weight_dict=None):

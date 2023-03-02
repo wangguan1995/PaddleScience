@@ -23,13 +23,21 @@ from .base import NetBase
 
 class MLP(NetBase):
     """Multi Layer Perceptron Network
+
+    Args:
+        input_keys (List[str]): Input keys, such as ["x", "y", "z"].
+        output_keys (List[str]): Output keys, such as ["u", "v", "w"].
+        num_layers (Optional[int]): Number of hidden layers.
+        hidden_size (Union[int, List[int]]): Number of hidden size.
+        activation (str, optional): Name of activation function. Defaults to "tanh".
     """
+
     def __init__(self,
-        input_keys: List[str],
-        output_keys: List[str],
-        num_layers: Optional[int],
-        hidden_size: Union[int, List[int]],
-        activation: str="tanh"
+        input_keys,
+        output_keys,
+        num_layers,
+        hidden_size,
+        activation
     ):
         super().__init__()
         self.input_keys = input_keys
@@ -38,17 +46,17 @@ class MLP(NetBase):
         if isinstance(hidden_size, (tuple, list)):
             if num_layers is not None:
                 raise ValueError(
-                    f"num_layers must be None when hidden_size is specified"
+                    f"num_layers should be None when hidden_size is specified"
                 )
         elif isinstance(hidden_size, int):
             if not isinstance(num_layers, int):
                 raise ValueError(
-                    f"num_layers must be an int when hidden_size is an int"
+                    f"num_layers should be an int when hidden_size is an int"
                 )
             hidden_size = [hidden_size] * num_layers
         else:
             raise ValueError(
-                f"hidden_size must be list of int or int"
+                f"hidden_size should be list of int or int"
                 f"but got {type(hidden_size)}"
             )
 
@@ -63,7 +71,7 @@ class MLP(NetBase):
         # initialize activation function
         self.act = get_activation(activation)
 
-    def forward_tensor(self, x: paddle.Tensor):
+    def forward_tensor(self, x):
         y = x
         for i, linear in enumerate(self.linears):
             y = linear(y)
@@ -71,7 +79,7 @@ class MLP(NetBase):
                 y = self.act(y)
         return y
 
-    def forward(self, x: Dict[str, paddle.Tensor]):
+    def forward(self, x):
         if self._input_transform is not None:
             x = self._input_transform(x)
 

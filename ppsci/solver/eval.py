@@ -22,7 +22,7 @@ import paddle.amp as amp
 
 from ..utils import misc, profiler
 from ..utils.expression import ExpressionSolver
-from ..visualize import save_vtk_from_array, save_vtk_from_dict
+from ..visualize import save_vtu_from_dict
 from .printer import log_eval_info, update_eval_loss
 
 
@@ -133,7 +133,7 @@ def eval_func(solver, epoch_id, log_freq):
             while isinstance(tmp, dict):
                 tmp = next(iter(tmp.values()))
             assert isinstance(tmp, (int, float)), \
-                f"target metric({type(tmp)}) must be a number"
+                f"target metric({type(tmp)}) should be a number"
             target_metric = tmp
 
         visual_dir = osp.join(
@@ -144,7 +144,7 @@ def eval_func(solver, epoch_id, log_freq):
         )
         if solver.rank == 0:
             os.makedirs(visual_dir, exist_ok=True)
-            save_vtk_from_dict(
+            save_vtu_from_dict(
                 osp.join(visual_dir, _validator.name),
                 {**all_output, **all_input},
                 _validator.input_keys,

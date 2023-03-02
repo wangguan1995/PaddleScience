@@ -66,6 +66,7 @@ class NetBase(nn.Layer):
             elif isinstance(layer, (nn.BatchNorm, nn.BatchNorm2D, nn.BatchNorm3D)):
                 num_bn += 1
         _str = ", ".join([
+            self.__class__.__name__,
             f"num_fc = {num_fc}",
             f"num_conv = {num_conv}",
             f"num_bn = {num_bn}",

@@ -48,7 +48,7 @@ class Solver(object):
         # set random seed
         seed = self.cfg["Global"].get("seed", 42)
         if seed is not None and seed is not False:
-            assert isinstance(seed, int), f"Global.seed({seed}) must be a integer"
+            assert isinstance(seed, int), f"Global.seed({seed}) should be a integer"
             paddle.seed(seed + self.rank)
             np.random.seed(seed + self.rank)
             random.seed(seed + self.rank)

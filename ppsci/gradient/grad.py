@@ -178,7 +178,7 @@ def hessian(ys, xs, component=None, i=0, j=0, grad_y=None):
         ys: Output Tensor of shape (batch_size, dim_y).
         xs: Input Tensor of shape (batch_size, dim_x).
         component: If dim_y > 1, then `ys[:, component]` is used as y to compute the
-            Hessian. If dim_y = 1, `component` must be ``None``.
+            Hessian. If dim_y = 1, `component` should be ``None``.
         i (int):
         j (int):
         grad_y: The gradient of y w.r.t. `xs`. Provide `grad_y` if known to avoid

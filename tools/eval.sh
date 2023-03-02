@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # for single card eval
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=3
 # python3.7 tools/eval.py -c ppsci/configs/ldc2d/ldc2d_steady.yaml -o Global.pretrained_model=output/MLP/epoch_200
 # python3.7 tools/eval.py -c ppsci/configs/ldc2d/ldc2d_unsteady_time_even.yaml -o Global.pretrained_model=output/MLP/epoch_200
 python3.7 tools/eval.py -c ppsci/configs/poisson/poisson3d_robin.yaml -o Global.pretrained_model=output/MLP/latest

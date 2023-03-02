@@ -37,7 +37,7 @@ class Mesh(Geometry):
         elif isinstance(mesh, pymesh.Mesh):
             self.py_mesh = mesh
         else:
-            raise ValueError(f"type of mesh({type(mesh)} must be str or pymesh.Mesh")
+            raise ValueError(f"type of mesh({type(mesh)} should be str or pymesh.Mesh")
 
         if "face_normal" not in self.py_mesh.get_attribute_names():
             self.py_mesh.add_attribute("face_normal")
@@ -109,7 +109,7 @@ class Mesh(Geometry):
             distance = [distance]
         if len(n) != len(distance):
             raise ValueError(
-                f"len(n)({len(n)}) must be equal to len(distance)({len(distance)})"
+                f"len(n)({len(n)}) should be equal to len(distance)({len(distance)})"
             )
         all_points = []
         for _n, _dist in zip(n, distance):
@@ -142,7 +142,7 @@ class Mesh(Geometry):
             distance = [distance]
         if len(n) != len(distance):
             raise ValueError(
-                f"len(n)({len(n)}) must be equal to len(distance)({len(distance)})"
+                f"len(n)({len(n)}) should be equal to len(distance)({len(distance)})"
             )
         all_points = []
         for _n, _dist in zip(n, distance):

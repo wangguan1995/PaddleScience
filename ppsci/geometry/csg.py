@@ -154,7 +154,6 @@ class CSGDifference(Geometry):
         x = np.empty(shape=(n, self.ndim), dtype="float32")
         _size = 0
         while _size < n:
-
             geom1_boundary_points = self.geom1.random_boundary_points(
                 n, random=random)
             geom1_boundary_points = geom1_boundary_points[~self.geom2.is_inside(
@@ -233,7 +232,6 @@ class CSGIntersection(Geometry):
         x = np.empty(shape=(n, self.ndim), dtype="float32")
         _size = 0
         while _size < n:
-
             geom1_boundary_points = self.geom1.random_boundary_points(
                 n, random=random)
             geom1_boundary_points = geom1_boundary_points[self.geom2.is_inside(

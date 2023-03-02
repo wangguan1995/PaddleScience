@@ -12,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
 import types
-# from typing import Dict
 
 import paddle
 import sympy
-# from ppsci.arch.mlp import MLP
 from ppsci.gradient import clear, hessian, jacobian
 
 
@@ -39,70 +35,90 @@ class ExpressionSolver(paddle.nn.Layer):
         self.expr_dict = {}
         self.output_dict = {}
 
-    def solve_expr(self, f):
-        if getattr(f, "name", None) in self.output_dict:
-            return self.output_dict[f.name]
-        if isinstance(f, sympy.Symbol):
-            f_name = f.name
-            if f_name in self.model.output_keys:
+    def solve_expr(self, expr):
+        """Evaluates the value of the expression recursively in the expression tree
+         by post-order traversal.
+
+        Args:
+            expr (sympy.Basic): Expression.
+
+        Returns:
+            Union[float, Tensor]: Value of current expression `expr`
+        """
+        # already computed in output_dict(including input data)
+        if getattr(expr, "name", None) in self.output_dict:
+            return self.output_dict[expr.name]
+
+        # compute output from model
+        if isinstance(expr, sympy.Symbol):
+            if expr.name in self.model.output_keys:
                 out_dict = self.model(self.output_dict)
                 self.output_dict.update(out_dict)
-                return self.output_dict[f_name]
+                return self.output_dict[expr.name]
             else:
                 raise ValueError(
-                    f"varname {f_name} not exist!"
+                    f"varname {expr.name} not exist!"
                 )
-        elif isinstance(f, sympy.Function):
-            f_name = f.name
+
+        # compute output from model
+        elif isinstance(expr, sympy.Function):
             out_dict = self.model(self.output_dict)
             self.output_dict.update(out_dict)
-            return self.output_dict[f_name]
-        elif isinstance(f, sympy.Derivative):
-            ys = self.solve_expr(f.args[0])
-            ys_name = f.args[0].name
+            return self.output_dict[expr.name]
+
+        # compute derivative
+        elif isinstance(expr, sympy.Derivative):
+            ys = self.solve_expr(expr.args[0])
+            ys_name = expr.args[0].name
             if ys_name not in self.output_dict:
                 self.output_dict[ys_name] = ys
-            xs = self.solve_expr(f.args[1][0])
-            xs_name = f.args[1][0].name
+            xs = self.solve_expr(expr.args[1][0])
+            xs_name = expr.args[1][0].name
             if xs_name not in self.output_dict:
                 self.output_dict[xs_name] = xs
-            order = f.args[1][1]
+            order = expr.args[1][1]
             if order == 1:
                 der = jacobian(self.output_dict[ys_name], self.output_dict[xs_name])
-                out_name = f"{ys_name}__{xs_name}"
-                if out_name not in self.output_dict:
-                    self.output_dict[out_name] = der
-                return der
+                der_name = f"{ys_name}__{xs_name}"
             elif order == 2:
                 der = hessian(self.output_dict[ys_name], self.output_dict[xs_name])
-                out_name = f"{ys_name}__{xs_name}__{xs_name}"
-                if out_name not in self.output_dict:
-                    self.output_dict[out_name] = der
-                return der
+                der_name = f"{ys_name}__{xs_name}__{xs_name}"
             else:
                 raise NotImplementedError(
-                    f"Derivative order({order}) >=3 not implemented yet"
+                    f"Expression {expr} has derivative order({order}) >=3, " \
+                    f"which is not implemented yet"
                 )
-        elif isinstance(f, sympy.Number):
-            return float(f)
-        elif isinstance(f, sympy.Add):
-            results = [self.solve_expr(arg) for arg in f.args]
+            if der_name not in self.output_dict:
+                self.output_dict[der_name] = der
+            return der
+
+        # return single python number directly for leaf node
+        elif isinstance(expr, sympy.Number):
+            return float(expr)
+
+        # compute sub-nodes value and merge by addition
+        elif isinstance(expr, sympy.Add):
+            results = [self.solve_expr(arg) for arg in expr.args]
             out = results[0]
             for i in range(1, len(results)):
                 out = out + results[i]
             return out
-        elif isinstance(f, sympy.Mul):
-            results = [self.solve_expr(arg) for arg in f.args]
+
+        # compute sub-nodes value and merge by multiplication
+        elif isinstance(expr, sympy.Mul):
+            results = [self.solve_expr(arg) for arg in expr.args]
             out = results[0]
             for i in range(1, len(results)):
                 out = out * results[i]
             return out
-        elif isinstance(f, sympy.Pow):
-            results = [self.solve_expr(arg) for arg in f.args]
+
+        # compute sub-nodes value and merge by power
+        elif isinstance(expr, sympy.Pow):
+            results = [self.solve_expr(arg) for arg in expr.args]
             return results[0] ** results[1]
         else:
             raise ValueError(
-                f"Node type {type(f)} is unknown"
+                f"Expression {expr} of type({type(expr)}) can't be solved yet."
             )
 
     def forward(self, input_dict):
