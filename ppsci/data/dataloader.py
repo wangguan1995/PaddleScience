@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class InfiniteDataLoader:
+class InfiniteDataLoader(object):
+    """A wrapper for infinite dataloader
+
+    Args:
+        dataloader (DataLoader): A finite dataloader to be wrapped.
+    """
     def __init__(self, dataloader):
         self.dataloader = dataloader
 

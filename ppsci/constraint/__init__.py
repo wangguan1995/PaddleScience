@@ -18,13 +18,13 @@ from copy import deepcopy
 from ..loss import build_loss
 from .boundary_constraint import BoundaryConstraint
 from .initial_constraint import InitialConstraint
-from .integral_constraint import IntegralrConstraint
+from .integral_constraint import IntegralConstraint
 from .interior_constraint import InteriorConstraint
 
 __all__ = [
     "BoundaryConstraint",
     "InitialConstraint",
-    "IntegralrConstraint",
+    "IntegralConstraint",
     "InteriorConstraint",
     "build_constraint"
 ]

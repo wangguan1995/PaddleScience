@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sympy
 from .base import PDE
 
 
@@ -23,12 +22,9 @@ class Laplace(PDE):
         dim (int): _description_
     """
     def __init__(self, dim: int):
-        x = sympy.Symbol("x")
-        y = sympy.Symbol("y")
-        z = sympy.Symbol("z")
-        invars = [x, y, z][: dim]
-        u = sympy.Function("u")(*invars)
-
         super().__init__()
-        self.equations["laplace"] = \
-            u.diff(x).diff(x) + u.diff(y).diff(y) + u.diff(z).diff(z)
+        x, y, z = self.create_symbols("x y z")
+        invars = [x, y, z][: dim]
+        u = self.create_function("u", invars)
+
+        self.equations["laplace"] = u.diff(x, 2) + u.diff(y, 2) + u.diff(z, 2)

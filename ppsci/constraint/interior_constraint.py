@@ -26,15 +26,33 @@ from .base import Constraint
 
 
 class InteriorConstraint(Constraint):
+    """Class for interior constraint.
+
+    Args:
+        label_expr (Dict[str, sympy.Basic]): Expression of how to compute label.
+        label_dict (Dict[str, Union[float, sympy.Basic]]): Value of label.
+        geom (Geometry): Geometry which constraint applied on.
+        dataloader_cfg (AttrDict): Config of building a dataloader.
+        loss (LossBase): Loss object.
+        random (str, optional): Random method for sampling points in geometry.
+            Defaults to "pseudo".
+        criteria (Callable, optional): Criteria for finely define subdomain in geometry.
+            Defaults to None.
+        evenly (bool, optional): Whether to use envely distribution in sampling.
+            Defaults to False.
+        weight_dict (Dict[str, Union[float, sympy.Basic]], optional): Weight for label
+            if specified. Defaults to None.
+        name (str, optional): Name of constraint object. Defaults to "EQ".
+    """
     def __init__(
         self,
         label_expr,
         label_dict,
-        geom: Geometry,
-        dataloader_cfg: AttrDict,
+        geom,
+        dataloader_cfg,
         loss,
         random="pseudo",
-        criteria: Callable=None,
+        criteria=None,
         evenly=False,
         weight_dict=None,
         name="EQ"

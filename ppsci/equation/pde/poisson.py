@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sympy
 from .base import PDE
 
 
@@ -25,17 +24,13 @@ class Poisson(PDE):
         time (bool): Whther equation is time-dependent.
     """
     def __init__(self, dim, alpha, time):
-        self.alpha = alpha
-
-        t = sympy.Symbol("t")
-        x = sympy.Symbol("x")
-        y = sympy.Symbol("y")
-        z = sympy.Symbol("z")
-        invars = [x, y, z][: dim]
+        super().__init__()
+        t, x, y, z = self.create_symbols("t x y z")
+        invars = invars[: dim]
         if time:
             invars = [t] + invars
-        u = sympy.Function("u")(*invars)
 
-        super().__init__()
-        self.equations["poisson"] = \
-            u.diff(t) - self.alpha * (u.diff(x).diff(x) + u.diff(y).diff(y) + u.diff(z).diff(z))
+        u = self.create_function("u", invars)
+
+        self.equations["poisson"] = u.diff(t) - \
+            alpha * (u.diff(x, 2) + u.diff(y, 2) + u.diff(z, 2))

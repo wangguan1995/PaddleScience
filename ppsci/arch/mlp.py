@@ -22,7 +22,7 @@ from .base import NetBase
 
 
 class MLP(NetBase):
-    """Multi Layer Perceptron Network
+    """Multi layer perceptron network.
 
     Args:
         input_keys (List[str]): Input keys, such as ["x", "y", "z"].
@@ -37,7 +37,7 @@ class MLP(NetBase):
         output_keys,
         num_layers,
         hidden_size,
-        activation
+        activation="tanh",
     ):
         super().__init__()
         self.input_keys = input_keys

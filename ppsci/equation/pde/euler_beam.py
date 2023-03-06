@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sympy
 from .base import PDE
 
 
@@ -26,10 +25,9 @@ class EulerBeam(PDE):
         time (bool, optional): _description_. Defaults to False.
     """
     def __init__(self, E=1.0, q=1.0, mass=1.0, time=False):
-        x = sympy.Symbol("x")
-        u = sympy.Function("u")(x)
-        u__x__x__x__x = u.diff(x).diff(x).diff(x).diff(x)
-
         super().__init__()
-        eq = E * u__x__x__x__x + 1
-        self.equations["eulerbeam"] = eq
+        x  = self.create_symbols("x")
+        u = self.create_function("u", x)
+        u__x__x__x__x = u.diff(x, 4)
+
+        self.equations["eulerbeam"] = E * u__x__x__x__x + 1

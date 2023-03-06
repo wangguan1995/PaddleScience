@@ -14,3 +14,8 @@
 
 from .navier_stokes import NavierStokes
 from .poisson import Poisson
+
+__all__ = [
+    "NavierStokes",
+    "Poisson",
+]

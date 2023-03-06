@@ -27,6 +27,14 @@ act_func_dict = {
 }
 
 def get_activation(act_name):
+    """Get activation function according to act_name.
+
+    Args:
+        act_name (str): Name of activation, such as "tanh".
+
+    Returns:
+        Callable: Paddle activation function.
+    """
     assert act_name in act_func_dict, \
         f"act_name({act_name}) not found in act_func_dict"
     return act_func_dict[act_name]

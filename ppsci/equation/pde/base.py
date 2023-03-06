@@ -12,10 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sympy
+
+
 class PDE(object):
+    """Base class for Partial Differential Equation
+    """
     def __init__(self):
         super().__init__()
         self.equations = {}
+
+    def create_symbols(symbol_str):
+        """Create symbols
+
+        Args:
+            symbol_str (str): String contains symbols, such as "x", "x y z".
+
+        Returns:
+            List[symbol.Symbol]: Created symbol(s).
+        """
+        return sympy.symbols(symbol_str)
+
+    def create_function(name, invars):
+        """Create named function depending on given invars.
+
+        Args:
+            name (str): Function name. such as "u", "v", and "f".
+            invars (List[Symbols]): List of independent variable of function.
+
+        Returns:
+            Function: Named sympy function.
+        """
+        return sympy.Function(name)(*invars)
 
     def __str__(self):
         _str = "\n".join(

@@ -110,7 +110,7 @@ def train_epoch_func(solver, epoch_id, log_freq):
 
 
 def train_LBFGS_epoch_func(solver, epoch_id, log_freq):
-    """Train function for one epoch with L-BFGS optimizer
+    """Train function for one epoch with L-BFGS optimizer.
 
     Args:
         solver (Solver): Main solver.

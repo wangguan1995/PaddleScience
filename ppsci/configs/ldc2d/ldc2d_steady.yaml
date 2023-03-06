@@ -28,6 +28,13 @@ Arch:
   hidden_size: 50
   activation: tanh
 
+Optimizer:
+  name: Adam
+  lr:
+    name: Cosine
+    learning_rate: 0.001
+    warmup_epoch: 6
+
 Equation:
   - NavierStokes:
       nu: 0.01
@@ -128,12 +135,5 @@ Validator:
 #   init_loss_scaling: 65536
 #   use_dynamic_loss_scaling: True
 #   level: O2
-
-Optimizer:
-  name: Adam
-  lr:
-    name: Cosine
-    learning_rate: 0.001
-    warmup_epoch: 6
 
 # Infer: TODO...

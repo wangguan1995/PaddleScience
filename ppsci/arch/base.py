@@ -48,6 +48,8 @@ class NetBase(nn.Layer):
         data = [data_dict[key] for key in keys]
         return paddle.concat(data, axis)
 
+def transform(image):
+    return image/255
     def register_input_transform(self, transform):
         self._input_transform = transform
 

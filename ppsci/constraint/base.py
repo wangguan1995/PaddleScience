@@ -23,7 +23,7 @@ from ..data.dataloader import InfiniteDataLoader
 
 
 def worker_init_fn(worker_id: int, num_workers: int, rank: int, seed: int):
-    """callback function on each worker subprocess after seeding and before data loading.
+    """Callback function on each worker subprocess after seeding and before data loading.
 
     Args:
         worker_id (int): Worker id in [0, num_workers - 1]
@@ -40,7 +40,6 @@ def worker_init_fn(worker_id: int, num_workers: int, rank: int, seed: int):
 
 class Constraint:
     """Base class for constraints"""
-
     def __init__(
         self,
         dataset,
