@@ -213,8 +213,12 @@ def l2_norm_square(x, wgt=None):
         return paddle.norm(x**2 * wgt, p=1)
 
 
-def mse(x, wgt=None):
+def mse(x, wgt=None, pointwise_weight=None):
     if wgt is None:
-        return paddle.mean(paddle.square(x))
+        if pointwise_weight is None:
+            return paddle.mean(paddle.square(x))
+        return paddle.mean(paddle.square(x) * pointwise_weight)
     else:
-        return paddle.mean(paddle.square(x)) * wgt
+        if pointwise_weight is None:
+            return paddle.mean(paddle.square(x)) * wgt
+        return paddle.mean(paddle.square(x) * pointwise_weight) * wgt

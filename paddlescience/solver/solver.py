@@ -102,13 +102,14 @@ class Solver(object):
     """
 
     # init
-    def __init__(self, pde, algo, opt=None):
+    def __init__(self, pde, algo, opt=None, lbm=None, update_freq=1):
         super(Solver, self).__init__()
-
+        self.lbm = lbm
         self.pde = pde
         self.algo = algo
         self.opt = opt
         self._dtype = config._dtype
+        self.update_freq = update_freq
 
         if paddle.in_dynamic_mode():
             self.__init_dynamic()
@@ -123,7 +124,7 @@ class Solver(object):
               num_epoch=2,
               bs=None,
               checkpoint_freq=1000,
-              checkpoint_path='./checkpoint/'):
+              checkpoint_path='./checkpoint_1/'):
         if paddle.in_dynamic_mode():
             return self.__solve_dynamic(num_epoch, bs, checkpoint_freq,
                                         checkpoint_path)
@@ -181,6 +182,17 @@ class Solver(object):
         inputs_attr = self.inputs_attr
         labels = self.labels
         labels_attr = self.labels_attr
+
+        # # error calculation
+        # time_list = [20]
+        # num_time = int(self.algo.loss._eqinput[0].shape[0] / 20000)
+        # # for i in range(num_time):
+        # #     time_list.append(self.algo.loss._eqinput[0][i * 20000][0])
+        # num_nodes = self.algo.loss._icinput[0].shape[0]
+        # err_inputs = np.zeros((num_nodes, 4))
+        # err_inputs[:, 1:4] = self.algo.loss._icinput[0][:, 1:4]
+        # err_sum = np.zeros((4,))
+
         # number of inputs and labels
         ninputs = len(inputs)
         nlabels = len(labels)
@@ -198,8 +210,8 @@ class Solver(object):
 
         elif (type(bs).__name__=='dict'):
             import paddlescience.solver.loader as loader
-            bs_input = [bs['interior'], bs['inlet'], bs['cylinder'], bs['outlet'], bs['top'], bs['bottom'], bs['ic'], bs['supervised']]   #inputs 
-            bs_label = [bs['ic'], bs['ic'], bs['ic'], bs['supervised'], bs['supervised'], bs['supervised'], bs['supervised']]     #labels
+            bs_input = [bs['interior'], bs['inlet'], bs['outlet'], bs['cylinder'], bs['top'], bs['bottom'], bs['ic'], bs['supervised']]   #inputs 
+            bs_label = [bs['ic'], bs['ic'], bs['ic'], bs['ic'], bs['supervised'], bs['supervised'], bs['supervised']]     #labels
 
             for i in range(ninputs):
                 iterator = loader.get_batch_iterator(bsize=int(bs_input[i]), n=len(inputs[i]), input=inputs[i].astype(np.float32))
@@ -221,7 +233,7 @@ class Solver(object):
             writer_ic_loss = LogWriter(
                 logdir=checkpoint_path + 'visualDL/ic_loss')
             writer_data_loss = LogWriter(
-                logdir=checkpoint_path + 'visualDL/data_loss')
+                logdir=checkpoint_path + 'visualDL/data_loss')    
         # Adam optimizer
         if isinstance(self.opt, paddle.optimizer.AdamW) or isinstance(
                 self.opt, paddle.optimizer.Adam):
@@ -233,6 +245,7 @@ class Solver(object):
             print(out_path)
             now = time.strftime("%H_%M_%S",time.localtime(time.time())) 
             file_name = now + '_test_loss.txt'
+            file_name_error =  now + '_test_error.txt'
             for epoch in range(num_epoch):
                 # TODO: error out num_epoch==0
 
@@ -248,10 +261,15 @@ class Solver(object):
                     nlabels=nlabels,
                     labels_attr=labels_attr,
                     pde=self.pde)
+                
+                if self.update_freq > 1:
+                    loss = loss / self.update_freq
 
                 loss.backward()
-                self.opt.step()
-                self.opt.clear_grad()
+                if (epoch + 1) % self.update_freq == 0:
+                    self.opt.step()
+                    self.opt.clear_grad()
+
                 if not isinstance(self.opt._learning_rate, float):
                     self.opt._learning_rate.step()
                 # write loss for visual DL
@@ -274,27 +292,37 @@ class Solver(object):
                             tag="detail_loss",
                             step=epoch,
                             value=loss_details[3].numpy()[0])
-                print(
-                    f"epoch: {epoch + 1} "
-                    f"lr: {self.opt.get_lr():.5f} "
-                    f"loss: {float(loss):.8f} "
-                    f"eq loss: {float(loss_details[0]):.8f} "
-                    f"bc loss: {float(loss_details[1]):.8f} "
-                    f"ic loss: {float(loss_details[2]):.8f} "
+
+                print_str = \
+                    f"epoch: {epoch + 1} "\
+                    f"lr: {self.opt.get_lr():.5f} "\
+                    f"loss: {float(loss):.8f} "\
+                    f"eq loss: {float(loss_details[0]):.8f} "\
+                    f"bc loss: {float(loss_details[1]):.8f} "\
+                    f"ic loss: {float(loss_details[2]):.8f} "\
                     f"data loss: {float(loss_details[3]):.8f}"
-                )
+                print(print_str)
                 
                 with open(out_path + file_name,'a') as file0:
-                    print(
-                        f"epoch: {epoch + 1} "
-                        f"lr: {self.opt.get_lr():.5f} "
-                        f"loss: {float(loss):.8f} "
-                        f"eq loss: {float(loss_details[0]):.8f} "
-                        f"bc loss: {float(loss_details[1]):.8f} "
-                        f"ic loss: {float(loss_details[2]):.8f} "
-                        f"data loss: {float(loss_details[3]):.8f}"
-                    , file = file0)
-                if (epoch + 1) % checkpoint_freq == 0:
+                    print(print_str, file = file0)
+                
+                # # error calculation
+                # if (epoch + 1) % 2 == 0 or epoch == 0:
+                #     residual = []
+                #     err_sum = np.zeros((4,))
+                #     for i in range(len(time_list)): 
+                #         err_inputs[:, 0:1] = np.ones((num_nodes, 1)) * time_list[i]
+                #         pred_list = self.__predict_dynamic(u_inputs=err_inputs, no_create=True)
+                #         temp_list = self.lbm[i][:, 4:8] - pred_list[0]
+                #         residual.append(np.absolute(np.array(temp_list)))
+                #         err_sum = err_sum + (np.array(residual[i])).sum(axis=0)
+                # print_str = 'u_err = %.2e, '%err_sum[0] + 'v_err = %.2e, '%err_sum[1] + \
+                #             'w_err = %.2e, '%err_sum[2] + 'p_err = %.2e, '%err_sum[3] + 'total_err = %.2e, '%np.sum(err_sum)
+                # print(print_str)
+                # with open(out_path + file_name_error,'a') as file1:
+                #     print(print_str, file = file1)
+
+                if (epoch + 1) % checkpoint_freq == 0:                    
                     paddle.save(self.algo.net.state_dict(),
                                 checkpoint_path + 'dynamic_net_params_' +
                                 str(epoch + 1) + '.pdparams')
@@ -389,21 +417,24 @@ class Solver(object):
             writer_data_loss.close()
  
     # predict dynamic
-    def __predict_dynamic(self):
+    def __predict_dynamic(self, u_inputs=None, no_create=False):
         # create inputs
-        inputs, inputs_attr = self.algo.create_inputs(self.pde)
- 
-        temp_inputs = [[] for _ in range(10)]
+        if no_create == False:
+            inputs, inputs_attr = self.algo.create_inputs(self.pde)
+        else:
+            inputs = [u_inputs]
+        n = 50
+        temp_inputs = [[] for _ in range(n)]
         # convert inputs to tensor
         for i in range(len(inputs)):
             # inputs[i] = paddle.to_tensor(inputs[i], dtype=self._dtype, stop_gradient=False)
-            temp = np.array_split(inputs[i], 10)
-            for j in range(10):
+            temp = np.array_split(inputs[i], n)
+            for j in range(n):
                 temp_tensor = paddle.to_tensor(temp[j], dtype=self._dtype, stop_gradient=False)
                 temp_inputs[j].append(temp_tensor)
         
         
-        for i in range(10):
+        for i in range(n):
             temp_outs = self.algo.compute_forward(None, *temp_inputs[i])
             for j in range(len(inputs)):
                 temp_outs[j] = temp_outs[j].numpy()

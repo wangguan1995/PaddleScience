@@ -55,7 +55,8 @@ class FCNet(NetworkBase):
                  num_outs,
                  num_layers,
                  hidden_size,
-                 activation='tanh'):
+                 activation='tanh',
+                 dropout=0.0):
         super(FCNet, self).__init__()
 
         self.num_ins = num_ins
@@ -67,7 +68,7 @@ class FCNet(NetworkBase):
         self._biases = [None for i in range(num_layers)]
         self._weights_attr = [None for i in range(num_layers)]
         self._bias_attr = [None for i in range(num_layers)]
-
+        self.drop_out = paddle.nn.Dropout(dropout) if dropout>0 else paddle.nn.Identity()
         act_str = {
             'sigmoid': F.sigmoid,
             'tanh': paddle.tanh,
@@ -134,6 +135,8 @@ class FCNet(NetworkBase):
             u = paddle.matmul(u, self._weights[i])
             u = paddle.add(u, self._biases[i])
             u = self.activation(u)
+            # if i == self.num_layers - 2:
+            #     u = self.drop_out(u)
         u = paddle.matmul(u, self._weights[-1])
         u = paddle.add(u, self._biases[-1])
         return u

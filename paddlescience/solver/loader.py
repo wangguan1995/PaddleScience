@@ -41,7 +41,7 @@ def get_batch_iterator(bsize, n, input):
         _type_: _description_
     """
     ds = EqDataSet(num_samples = n, input = input)
-    bs = paddle.io.BatchSampler(dataset = ds, shuffle = False, batch_size = bsize, drop_last = False)
+    bs = paddle.io.BatchSampler(dataset = ds, shuffle = True, batch_size = bsize, drop_last = False) # 这个地方shuffle=True
     loader = paddle.io.DataLoader(dataset = ds, batch_sampler = bs, num_workers=0)
     loader = InfiniteDataLoader(loader)
     return iter(loader)

@@ -240,7 +240,9 @@ class FormulaLoss:
             idx = labels_attr["data_next"][i]
             data = labels[idx]
             # loss += paddle.norm(cmploss.outs[:, i] - data, p=2)**2
-            loss += mse(cmploss.outs[:, i] - data)
+            weight = paddle.abs(data - 0.1)
+            weight = (weight / weight.sum()).detach()*data.numel()
+            loss += mse(cmploss.outs[:, i] - data, pointwise_weight=weight)
             # TODO: p=2 p=1
 
         loss = self._supwgt[0] * loss

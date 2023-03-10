@@ -23,7 +23,7 @@ def loss_reader(loss, loss_name_list, f):
 
     Args:
         loss (numpy array): return losses array
-        loss_name_list (string∂): name list of losses
+        loss_name_list (string): name list of losses
         f: files
     """
     counter = 0
@@ -39,11 +39,14 @@ def loss_reader(loss, loss_name_list, f):
 
 # plot train data
 plt.style.use('_mpl-gallery')
-out_path = os.getcwd() + "/examples/cylinder/3d_unsteady_discrete"
+import sys
+dirname, filename = os.path.split(os.path.abspath(sys.argv[0]))
+out_path = dirname
 name_list = ['lr', 'total loss', 'equation loss', 'boundary loss', 'Initial Condition loss', 'data loss']
 
 # start read files
-f = open(out_path + "/output/13_05_57_test_loss.txt")               # 返回一个文z件对象 
+f_name = '09_22_54_test_loss.txt'
+f = open(out_path + r'/output/' + f_name)               # 返回一个文z件对象 
 lines = f.readlines()
 n = len(lines)
 m = 6
@@ -51,7 +54,8 @@ loss = np.zeros((m, n), dtype = np.float64)
 loss_reader(loss, name_list, f)
 f.close()
 
-f_ref = open(out_path + "/output/ref_mini_batch_loss.txt")               # 返回一个文z件对象 
+ref_name = 'ref_mini_batch_loss.txt'
+f_ref = open(out_path + r'/output/' + ref_name)               # 返回一个文z件对象 
 lines = f_ref.readlines()
 n1 = len(lines)
 m1 = 6
@@ -68,12 +72,12 @@ for i, row in enumerate(ax):
         fluctuition_cease_node = 75000
         # col.axvline(fluctuition_cease_node, linestyle = '--', c = 'green')
         # col.axhline(loss[3 * i + j][fluctuition_cease_node], linestyle = '--', c = 'green')
-        col.plot(epoch, loss[3 * i + j], 'b--', label = 'my log')
+        col.plot(epoch, loss[3 * i + j], 'b--', label = f_name)
         if len(epoch) >= len(epoch_ref):
             max_len = len(epoch_ref)
         else:
             max_len = n
-        col.plot(epoch_ref[0:max_len], loss_ref[3 * i + j][0:max_len], 'r--', label = 'qipeng log')
+        col.plot(epoch_ref[0:max_len], loss_ref[3 * i + j][0:max_len], 'r--', label = ref_name)
         col.set_yscale('log')
         col.set(xlim=(0, n), ylim=(0, np.max(loss[3 * i + j])))
         col.legend()
@@ -118,6 +122,6 @@ ax1.set_xticks(range(output_num))
 ax1.set_xticklabels(label_list)
 ax1.legend()
 fig1.tight_layout()
-plt.savefig('./output/loss_ratio_ref.jpg')
+plt.savefig(out_path + '/output/loss_ratio_ref.jpg')
 plt.close(fig1)
 

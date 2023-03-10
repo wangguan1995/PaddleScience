@@ -33,8 +33,8 @@ import sys, os
 
 
 Re = 3900
-U0 = 0.1
-Dcylinder = 80.0
+U0 = 59.375
+Dcylinder = 80
 rho = 1.0
 nu = rho * U0 * Dcylinder / Re
 
@@ -42,6 +42,13 @@ t_star = Dcylinder / U0 # 800
 xyz_star = Dcylinder    # 80
 uvw_star = U0           # 0.1
 p_star = rho * U0 * U0  # 0.01
+# t_star = 1 # 800
+# xyz_star = 1    # 80
+# uvw_star = 1           # 0.1
+# p_star = 1  # 0.01
+
+
+
 
 # read configuration file : config.yaml
 dirname, filename = os.path.split(os.path.abspath(sys.argv[0]))
@@ -51,6 +58,7 @@ if config is not None:
     num_epoch = config['number of epoch']
     learning_rate = config['learning rate']
     hidden_size = config["hidden size"]
+    hidden_layers = config["hidden layers"]
     # batch size
     bs = {}
     bs['interior'] = config['batch size']['interior']
@@ -91,8 +99,8 @@ np.random.seed(seed_number)
 
 # time array
 ic_t = 200000
-t_start = 200050
-t_end = 201000
+t_start = 201050 # LBM min 200000
+t_end = 202000 # LBM max 204950
 t_step = 50
 time_num = int((t_end - t_start) / t_step) + 1
 time_list = np.linspace(int((t_start - ic_t) / t_step), int((t_end - ic_t) / t_step), time_num, endpoint=True).astype(int)
@@ -111,8 +119,14 @@ print(f"time_array = {time_array}")
 
 
 # initial value
-ic_name = dirname + r'/data/LBM_result_20_steps/cylinder3d_2023_1_31_LBM_'
+ic_name = dirname + r'/data/LBM_result/cylinder3d_2023_1_31_LBM_'
+# ic_name = dirname + r'/vtk/0302_predict_'
+# temp_list = (np.arange(1,21)).tolist()
 txyz_uvwpe_ic = load_vtk([0], t_step=50, load_uvwp=True, load_txyz=True, name_wt_time=ic_name)[0]
+# txyz_uvwpe_ic= np.zeros((0,8))
+# for i in range(time_index.shape[0]):
+#     txyz_uvwpe_ic = np.concatenate((txyz_uvwpe_ic, txyz_uvwpe_ic_new[i][:, :]), axis=0) 
+
 init_t = txyz_uvwpe_ic[:, 0] / t_star; print(f"init_t={init_t.shape} {init_t.mean().item():.10f}")
 init_x = txyz_uvwpe_ic[:, 1] / xyz_star; print(f"init_x={init_x.shape} {init_x.mean().item():.10f}")
 init_y = txyz_uvwpe_ic[:, 2] / xyz_star; print(f"init_y={init_y.shape} {init_y.mean().item():.10f}")
@@ -129,8 +143,8 @@ n_sup = 2000
 sup_name = dirname + r"/data/sup_data/supervised_"
 txyz_uvwpe_s_new = load_vtk(time_index, t_step=t_step, load_uvwp=True, load_txyz=True, name_wt_time=sup_name)
 txyz_uvwpe_s = np.zeros((0,8))
-for i in range(8):
-    txyz_uvwpe_s = np.concatenate((txyz_uvwpe_s, txyz_uvwpe_s_new[i][:, :]), axis=0)
+for i in range(time_index.shape[0]):
+    txyz_uvwpe_s = np.concatenate((txyz_uvwpe_s, txyz_uvwpe_s_new[i][:, :]), axis=0) 
 sup_t = txyz_uvwpe_s[:, 0] / t_star; print(f"sup_t={sup_t.shape} {sup_t.mean().item():.10f}")
 sup_x = txyz_uvwpe_s[:, 1] / xyz_star; print(f"sup_x={sup_x.shape} {sup_x.mean().item():.10f}")
 sup_y = txyz_uvwpe_s[:, 2] / xyz_star; print(f"sup_y={sup_y.shape} {sup_y.mean().item():.10f}")
@@ -148,25 +162,28 @@ inlet_txyz, outlet_txyz, _, _, top_txyz, bottom_txyz, cylinder_txyz, interior_tx
     sample_data.sample_data(t_num=time_num, t_index=time_index, t_step=t_step, nr_points=num_points)
 
 # interior nodes discre
-i_t = interior_txyz[:, 0] / t_star;     print(f"i_t={i_t.shape} {i_t.mean().item():.10f}")
+i_t = np.random.uniform(low=0, high=100, size=len(interior_txyz[:, 0]))
+# i_t = interior_txyz[:, 0] / t_star;     print(f"i_t={i_t.shape} {i_t.mean().item():.10f}")
 i_x = interior_txyz[:, 1] / xyz_star;   print(f"i_x={i_x.shape} {i_x.mean().item():.10f}")
 i_y = interior_txyz[:, 2] / xyz_star;   print(f"i_y={i_y.shape} {i_y.mean().item():.10f}")
 i_z = interior_txyz[:, 3] / xyz_star;   print(f"i_z={i_z.shape} {i_z.mean().item():.10f}")
 
 # bc inlet nodes discre
-b_inlet_t = inlet_txyz[:, 0] / t_star;   print(f"b_inlet_t={b_inlet_t.shape} {b_inlet_t.mean().item():.10f}")
+b_inlet_t = np.random.uniform(low=0, high=100, size=len(inlet_txyz[:, 0]))  # inlet_txyz[:, 0] / t_star;   print(f"b_inlet_t={b_inlet_t.shape} {b_inlet_t.mean().item():.10f}")
 b_inlet_x = inlet_txyz[:, 1] / xyz_star; print(f"b_inlet_x={b_inlet_x.shape} {b_inlet_x.mean().item():.10f}")
 b_inlet_y = inlet_txyz[:, 2] / xyz_star; print(f"b_inlet_y={b_inlet_y.shape} {b_inlet_y.mean().item():.10f}")
 b_inlet_z = inlet_txyz[:, 3] / xyz_star; print(f"b_inlet_z={b_inlet_z.shape} {b_inlet_z.mean().item():.10f}")
 
 # bc outlet nodes discre
-b_outlet_t = outlet_txyz[:, 0] / t_star;   print(f"b_outlet_t={b_outlet_t.shape} {b_outlet_t.mean().item():.10f}")
+b_outlet_t = np.random.uniform(low=0, high=100, size=len(outlet_txyz[:, 0]))
+# b_outlet_t = outlet_txyz[:, 0] / t_star;   print(f"b_outlet_t={b_outlet_t.shape} {b_outlet_t.mean().item():.10f}")
 b_outlet_x = outlet_txyz[:, 1] / xyz_star; print(f"b_outlet_x={b_outlet_x.shape} {b_outlet_x.mean().item():.10f}")
 b_outlet_y = outlet_txyz[:, 2] / xyz_star; print(f"b_outlet_y={b_outlet_y.shape} {b_outlet_y.mean().item():.10f}")
 b_outlet_z = outlet_txyz[:, 3] / xyz_star; print(f"b_outlet_z={b_outlet_z.shape} {b_outlet_z.mean().item():.10f}")
 
 # bc cylinder nodes discre
-b_cylinder_t = cylinder_txyz[:, 0] / t_star;   print(f"b_cylinder_t={b_cylinder_t.shape} {b_cylinder_t.mean().item():.10f}")
+b_cylinder_t = np.random.uniform(low=0, high=100, size=len(cylinder_txyz[:, 0]))
+# b_cylinder_t = cylinder_txyz[:, 0] / t_star;   print(f"b_cylinder_t={b_cylinder_t.shape} {b_cylinder_t.mean().item():.10f}")
 b_cylinder_x = cylinder_txyz[:, 1] / xyz_star; print(f"b_cylinder_x={b_cylinder_x.shape} {b_cylinder_x.mean().item():.10f}")
 b_cylinder_y = cylinder_txyz[:, 2] / xyz_star; print(f"b_cylinder_y={b_cylinder_y.shape} {b_cylinder_y.mean().item():.10f}")
 b_cylinder_z = cylinder_txyz[:, 3] / xyz_star; print(f"b_cylinder_z={b_cylinder_z.shape} {b_cylinder_z.mean().item():.10f}")
@@ -184,13 +201,15 @@ b_cylinder_z = cylinder_txyz[:, 3] / xyz_star; print(f"b_cylinder_z={b_cylinder_
 # b_back_z = back_txyz[:, 3] / xyz_star; print(f"b_back_z={b_back_z.shape} {b_back_z.mean().item():.10f}")
 
 # bc-top nodes discre
-b_top_t = top_txyz[:, 0] / t_star;   print(f"b_top_t={b_top_t.shape} {b_top_t.mean().item():.10f}") # value = [1, 2, 3, 4, 5]
+b_top_t = np.random.uniform(low=0, high=100, size=len(top_txyz[:, 0]))
+# b_top_t = top_txyz[:, 0] / t_star;   print(f"b_top_t={b_top_t.shape} {b_top_t.mean().item():.10f}") # value = [1, 2, 3, 4, 5]
 b_top_x = top_txyz[:, 1] / xyz_star; print(f"b_top_x={b_top_x.shape} {b_top_x.mean().item():.10f}")
 b_top_y = top_txyz[:, 2] / xyz_star; print(f"b_top_y={b_top_y.shape} {b_top_y.mean().item():.10f}")
 b_top_z = top_txyz[:, 3] / xyz_star; print(f"b_top_z={b_top_z.shape} {b_top_z.mean().item():.10f}")
 
 # bc-bottom nodes discre
-b_bottom_t = bottom_txyz[:, 0] / t_star;   print(f"b_bottom_t={b_bottom_t.shape} {b_bottom_t.mean().item():.10f}") # value = [1, 2, 3, 4, 5]
+b_bottom_t = np.random.uniform(low=0, high=100, size=len(bottom_txyz[:, 0]))
+# b_bottom_t = bottom_txyz[:, 0] / t_star;   print(f"b_bottom_t={b_bottom_t.shape} {b_bottom_t.mean().item():.10f}") # value = [1, 2, 3, 4, 5]
 b_bottom_x = bottom_txyz[:, 1] / xyz_star; print(f"b_bottom_x={b_bottom_x.shape} {b_bottom_x.mean().item():.10f}")
 b_bottom_y = bottom_txyz[:, 2] / xyz_star; print(f"b_bottom_y={b_bottom_y.shape} {b_bottom_y.mean().item():.10f}")
 b_bottom_z = bottom_txyz[:, 3] / xyz_star; print(f"b_bottom_z={b_bottom_z.shape} {b_bottom_z.mean().item():.10f}")
@@ -210,10 +229,10 @@ inputsup = np.stack((sup_t, sup_x, sup_y, sup_z), axis=1)
 refsup = np.stack((sup_u, sup_v, sup_w), axis=1)
 
 # N-S, Re=3900, D=80, u=0.1, nu=80/3900; nu = rho u D / Re = 1.0 * 0.1 * 80 / 3900
-pde = psci.pde.NavierStokes(nu=0.00205, rho=1.0, dim=3, time_dependent=True)
+pde = psci.pde.NavierStokes(nu=nu, rho=1.0, dim=3, time_dependent=True)
 
 # set bounday condition
-bc_inlet_u = psci.bc.Dirichlet("u", rhs=1.0)
+bc_inlet_u = psci.bc.Dirichlet("u", rhs=U0/uvw_star)
 bc_inlet_v = psci.bc.Dirichlet("v", rhs=0.0)
 bc_inlet_w = psci.bc.Dirichlet("w", rhs=0.0)
 bc_cylinder_u = psci.bc.Dirichlet("u", rhs=0.0)
@@ -226,10 +245,10 @@ bc_outlet_p = psci.bc.Dirichlet("p", rhs=0.0)
 # bc_back_u = psci.bc.Dirichlet("u", rhs=0.0)
 # bc_back_v = psci.bc.Dirichlet("v", rhs=0.0)
 # bc_back_w = psci.bc.Dirichlet("w", rhs=0.0)
-bc_top_u = psci.bc.Dirichlet("u", rhs=1.0)
+bc_top_u = psci.bc.Dirichlet("u", rhs=U0/uvw_star)
 bc_top_v = psci.bc.Dirichlet("v", rhs=0.0)
 bc_top_w = psci.bc.Dirichlet("w", rhs=0.0)
-bc_bottom_u = psci.bc.Dirichlet("u", rhs=1.0)
+bc_bottom_u = psci.bc.Dirichlet("u", rhs=U0/uvw_star)
 bc_bottom_v = psci.bc.Dirichlet("v", rhs=0.0)
 bc_bottom_w = psci.bc.Dirichlet("w", rhs=0.0)
 
@@ -247,11 +266,16 @@ ic_u = psci.ic.IC("u", rhs=init_u)
 ic_v = psci.ic.IC("v", rhs=init_v)
 ic_w = psci.ic.IC("w", rhs=init_w)
 ic_p = psci.ic.IC("p", rhs=init_p)
-pde.set_ic(ic_u, ic_v, ic_w) # 添加ic_p会使ic_loss非常大
+pde.set_ic(ic_u, ic_v, ic_w, ic_p) # 添加ic_p会使ic_loss非常大
 
 # Network
 net = psci.network.FCNet(
-    num_ins=4, num_outs=4, num_layers=6, hidden_size=hidden_size, activation="tanh")
+    num_ins=4, num_outs=4, num_layers=hidden_layers, hidden_size=hidden_size, activation="tanh")
+net_ref = dirname + r'/4e5_checkpoint/dynamic_net_params_400000.pdparams'
+# net.initialize(net_ref)
+for n, p in net.named_parameters():
+    print(f"{n} {p.mean().item():.10f}")
+
 
 outeq = net(inputeq)
 outbc1 = net(inputbc1)
@@ -301,8 +325,11 @@ from paddle.regularizer import L2Decay
 _lr = psci.optimizer.lr.Cosine(num_epoch, 1, learning_rate = learning_rate, warmup_epoch=w_epoch, by_epoch=True)()
 opt = psci.optimizer.Adam(learning_rate=_lr, parameters=net.parameters())
 
+name_wt_time = ic_name
+lbm_uvwp = load_vtk([20], t_step=t_step, load_uvwp=True, name_wt_time=name_wt_time)
+
 # Solver
-solver = psci.solver.Solver(pde=pde, algo=algo, opt=opt)
+solver = psci.solver.Solver(pde=pde, algo=algo, opt=opt, lbm=lbm_uvwp, update_freq=1)
 
 # Solve
 solution = solver.solve(num_epoch=num_epoch, bs=bs)
