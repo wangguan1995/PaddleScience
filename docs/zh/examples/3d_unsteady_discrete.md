@@ -6,16 +6,17 @@
 
 圆柱绕流在工程中十分常见，如桥墩，电缆，海底电缆管道，海底石油管道，海洋平台支架等圆形截面的工程结构经常会处于流体绕流的工况，高雷诺数三维圆柱绕流，而随着流体雷诺数的增加，粘性力超过惯性力占主导地位，此时流体从层流向更复杂的湍流过度，此时流线变得无序混乱，周期性的产生和耗散大量尺寸不一的旋涡。
 
-流态转变时的雷诺数值称为临界雷诺数。一般雷诺数Re>4000为湍流状态，Re=2320～4000为过渡状态。而临界雷诺数Re=3900，作为流体力学领域的一个经典案例，对我们研究湍流的发展和规律有着重要意义。
+流态转变时的雷诺数值称为临界雷诺数。一般雷诺数 $Re>4000$ 为湍流状态，$Re=2320～4000$ 为过渡状态。而临界雷诺数 $Re=3900$，作为流体力学领域的一个经典案例，对我们研究湍流的发展和规律有着重要意义。
 
+流体问题一般很难直接进行积分计算解析解，常用计算流场的方法一般有数值模拟和实验测量。
 
-对于非定常高雷诺数绕流流动,在传统数值方面,可以采用DNS方法，该方法受限于计算量较大，对数据存储要求高。另一方面，作为现代工业流体软件核心，可以采用雷诺平均方法(RANS), 但是，非定常RANS方法无法预测小涡。而LES方法需要近壁面精细网格，还有其他的方法诸如LBM方法、混合的DES以及衍生方法、SPH方法等等求解流体问题。
+对于非定常高雷诺数绕流流动,在传统数值方面,可以采用直接数值模拟方法(DNS)，该方法受限于计算量较大，对数据存储要求高。另一方面，作为现代工业流体软件核心，可以采用雷诺平均方法(RANS), 但是，非定常RANS方法无法预测小涡。而大涡模拟方法(LES)需要近壁面精细网格，还有其他的方法诸如格子玻尔兹曼方法(LBM)、混合RANS和LES的分离涡模型方法(DES)以及衍生方法、光滑粒子流体动力学方法(SPH)等等，可以求解计算流体问题。
 
 ![图片](../../images/3d_unsteady_discrete/OpenFoam.png)
 <figcaption>2016 D’Alessandro.V, Openfoam</figcaption>
 
 
-在实验方面，一般采用粒子图像测速（PIV）和热线法测量，测试到圆柱不同距离的流线速度，但是实验测量的分辨率受到设备限制，无法在有限实验经费内实现高测量分辨率。
+在实验方面，一般采用粒子图像测速（PIV）和热线法测量(HWM)，测试到圆柱不同距离的流线速度，但是实验测量的分辨率受到设备限制，无法在有限实验经费内实现高测量分辨率。
 
 ![图片](../../images/3d_unsteady_discrete/Experiments.png)
 <figcaption>1994 Ong.L, PIV+HWM</figcaption>
@@ -23,12 +24,14 @@
 
 ## 2. 问题定义
 问题假设：三维，瞬态，不可压缩，温度不变，有粘性，牛顿流体, 忽略重力等体积力
-|符号|$u$|$v$|$w$|$p$|$x$|$y$|$z$|$t$|$\rho$|$\mu$
+
+| 符号 |$u$|$v$|$w$|$p$|$x$|$y$|$z$|$t$|$\rho$|$\mu$
 |----|----|----|----|----|----|----|----|----|----|----|
 |含义|x方向速度|y方向速度|z方向速度|压力|x方向位移|y方向位移|z方向位移|时间|密度|动力粘性系数
 |单位|$m/s$|$m/s$|$m/s$|$Pa$|$m$|$m$|$m$|$s$|$kg/m^3$|$N\cdot s/m^2$
 
-纳维尔斯托克斯方程组 Navier-Stokes Equations：\
+纳维尔斯托克斯方程组 Navier-Stokes Equations：
+
 质量守恒：
 
 $$
@@ -50,8 +53,9 @@ $$
 $z$ 动量守恒：
 
 $$
-\frac{\partial u}{\partial t}  + u\frac{\partial v}{\partial x} + v\frac{\partial v}{\partial y} + w\frac{\partial v}{\partial z} = -\frac{1}{\rho} \frac{\partial p}{\partial x} + \mu(\frac{\partial^2 v}{\partial x^2}+ \frac{\partial^2 v}{\partial y^2}+ \frac{\partial^2 v}{\partial z^2})
+\frac{\partial u}{\partial t}  + u\frac{\partial w}{\partial x} + v\frac{\partial w}{\partial y} + w\frac{\partial w}{\partial z} = -\frac{1}{\rho} \frac{\partial p}{\partial x} + \mu(\frac{\partial^2 w}{\partial x^2}+ \frac{\partial^2 w}{\partial y^2}+ \frac{\partial^2 w}{\partial z^2})
 $$
+
 **设特征速度值为：$U_0=0.1m/s$， 特征长度:$L_0=80m$**
 
 $$t_0 = \dfrac{L_0}{U_0}$$
@@ -76,11 +80,16 @@ $$p_0 = \rho {U_0}^2$$
 
 对于流体域（六面体）边界和流体域内部几何体（圆柱）边界，则需施加 Dirichlet 边界条件
 
-流体域入口（-x方向）边界$u = 1\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$\
-流体域出口（x方向）压力边界：$p = 0\ Pa$\
-流体域顶部（y方向）无摩擦边界：$u = 1\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$\
-流体域底部（y方向）无摩擦边界：$u = 1\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$\
-流体域底部（y方向）无摩擦边界：$u = 1\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$\
+流体域入口（-x方向）边界: $u = 1\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$
+
+流体域出口（x方向）压力边界：$p = 0\ Pa$
+
+流体域顶部（y方向）无摩擦边界：$u = 1\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$
+
+流体域底部（y方向）无摩擦边界：$u = 1\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$
+
+流体域底部（y方向）无摩擦边界：$u = 1\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$
+
 几何体（圆柱曲面）无滑移边界：$u = 0\ m/s,\ v = 0\ m/s,\ w = 0\ m/s$
 
 ## 3. 问题求解
@@ -329,7 +338,6 @@ visualizer = {
 完成上述设置之后，只需要将上述实例化的对象按顺序传递给 `ppsci.solver.Solver`，然后启动训练、评估、可视化。
 
 ``` py linenums="207"
---8<--
 # initialize solver
 solver = ppsci.solver.Solver(
     model,
@@ -352,8 +360,6 @@ solver.train()
 
 # visualize model
 solver.visualize()
-
---8<--
 ```
 
 ## 4. 完整代码
@@ -368,7 +374,7 @@ examples/cylinder/3d_unsteady_discrete/cylinder3d_unsteady.py
 
 ???+ info "说明"
 
-    本案例只作为demo展示，尚未进行充分调优，下方部分展示结果可能与 OpenFOAM 存在一定差别。
+    本案例只作为demo展示，尚未进行充分调优，下方部分展示结果可能与其他数值方法存在一定差别。
 
 ![图片](../../images/3d_unsteady_discrete/PINNs_LBM_u.png)
 <figcaption>x方向速度 $u$ ：PINNs(left) LBM(right)</figcaption>
