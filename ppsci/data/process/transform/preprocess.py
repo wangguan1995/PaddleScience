@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable
 from typing import Dict
 from typing import Tuple
 from typing import Union
@@ -31,7 +32,7 @@ class Translate:
         >>> translate = ppsci.data.transform.Translate({"x": 1.0, "y": -1.0})
     """
 
-    def __init__(self, offset: Dict[str, Union[int, float]]):
+    def __init__(self, offset: Dict[str, float]):
         self.offset = offset
 
     def __call__(self, data_dict):
@@ -53,7 +54,7 @@ class Scale:
         >>> translate = ppsci.data.transform.Scale({"x": 1.5, "y": 2.0})
     """
 
-    def __init__(self, scale: Dict[str, Union[int, float]]):
+    def __init__(self, scale: Dict[str, float]):
         self.scale = scale
 
     def __call__(self, data_dict):
@@ -205,7 +206,7 @@ class SqueezeData:
                     input_item[key] = value.reshape((B * C, H, W))
                 if value.ndim != 3:
                     raise ValueError(
-                        "Only support squeeze data to ndim=3 now, but got ndim={value.ndim}"
+                        f"Only support squeeze data to ndim=3 now, but got ndim={value.ndim}"
                     )
         if "label" in self.apply_keys:
             for key, value in label_item.items():
@@ -214,6 +215,41 @@ class SqueezeData:
                     label_item[key] = value.reshape((B * C, H, W))
                 if value.ndim != 3:
                     raise ValueError(
-                        "Only support squeeze data to ndim=3 now, but got ndim={value.ndim}"
+                        f"Only support squeeze data to ndim=3 now, but got ndim={value.ndim}"
                     )
         return input_item, label_item, weight_item
+
+
+class FunctionalTransform:
+    """Functional data transform class, which allows to use custom data transform function from given transform_func for special cases.
+
+    Args:
+        transform_func (Callable): Function of data transform.
+
+    Examples:
+        >>> import ppsci
+        >>> import numpy as np
+        >>> def transform_func(data_dict):
+        ...     rand_ratio = np.random.rand()
+        ...     for key in data_dict:
+        ...         data_dict[key] = data_dict[key] * rand_ratio
+        ...     return data_dict
+        >>> transform_cfg = {
+        ...     "transforms": (
+        ...         {
+        ...             "FunctionalTransform": {
+        ...                 "transform_func": transform_func,
+        ...             },
+        ...         },
+        ...     ),
+        ... }
+    """
+
+    def __init__(
+        self,
+        transform_func: Callable,
+    ):
+        self.transform_func = transform_func
+
+    def __call__(self, data_dict: Dict[str, np.ndarray]):
+        return self.transform_func(data_dict)

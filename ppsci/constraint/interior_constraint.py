@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import types
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -25,9 +25,11 @@ from sympy.parsing import sympy_parser as sp_parser
 from typing_extensions import Literal
 
 from ppsci import geometry
-from ppsci import loss
 from ppsci.constraint import base
 from ppsci.data import dataset
+
+if TYPE_CHECKING:
+    from ppsci import loss
 
 
 class InteriorConstraint(base.Constraint):
@@ -75,7 +77,7 @@ class InteriorConstraint(base.Constraint):
         label_dict: Dict[str, Union[float, Callable]],
         geom: geometry.Geometry,
         dataloader_cfg: Dict[str, Any],
-        loss: loss.Loss,
+        loss: "loss.Loss",
         random: Literal["pseudo", "LHS"] = "pseudo",
         criteria: Optional[Callable] = None,
         evenly: bool = False,
@@ -136,10 +138,12 @@ class InteriorConstraint(base.Constraint):
         if weight_dict is not None:
             for key, value in weight_dict.items():
                 if isinstance(value, str):
-                    value = sp_parser.parse_expr(value)
-
-                if isinstance(value, (int, float)):
-                    weight[key] = np.full_like(next(iter(label.values())), value)
+                    if value == "sdf":
+                        weight[key] = input["sdf"]
+                    else:
+                        raise NotImplementedError(f"string {value} is invalid yet.")
+                elif isinstance(value, (int, float)):
+                    weight[key] = np.full_like(next(iter(label.values())), float(value))
                 elif isinstance(value, sympy.Basic):
                     func = sympy.lambdify(
                         sympy.symbols(geom.dim_keys),
@@ -158,6 +162,9 @@ class InteriorConstraint(base.Constraint):
                         )
                 else:
                     raise NotImplementedError(f"type of {type(value)} is invalid yet.")
+
+        if "sdf" in input:
+            input.pop("sdf")
 
         # wrap input, label, weight into a dataset
         _dataset = getattr(dataset, dataloader_cfg["dataset"])(input, label, weight)

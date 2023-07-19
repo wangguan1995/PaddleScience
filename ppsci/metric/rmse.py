@@ -28,23 +28,32 @@ class RMSE(base.Metric):
     r"""Root mean square error
 
     $$
-    metric = \sqrt{\dfrac{1}{N}\sum\limits_{i=1}^{N}{(x_i-y_i)^2}}
+    metric = \sqrt{\dfrac{1}{N} \Vert \mathbf{x} - \mathbf{y} \Vert_2^2}
     $$
+
+    $$
+    \mathbf{x}, \mathbf{y} \in \mathcal{R}^{N}
+    $$
+
+    Args:
+        keep_batch (bool, optional): Whether keep batch axis. Defaults to False.
 
     Examples:
         >>> import ppsci
         >>> metric = ppsci.metric.RMSE()
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, keep_batch: bool = False):
+        if keep_batch:
+            raise ValueError(f"keep_batch should be False, but got {keep_batch}.")
+        super().__init__(keep_batch)
 
     @paddle.no_grad()
     def forward(self, output_dict, label_dict):
         metric_dict = {}
         for key in label_dict:
             rmse = F.mse_loss(output_dict[key], label_dict[key], "mean") ** 0.5
-            metric_dict[key] = float(rmse)
+            metric_dict[key] = rmse
 
         return metric_dict
 
@@ -57,7 +66,7 @@ class LatitudeWeightedRMSE(base.Metric):
     $$
 
     $$
-    L_m = N_{lat}\dfrac{cos(lat_m)}{\sum\limits_{j=1}^{N_{lat}}cos(lat_j)}
+    L_m = N_{lat}\dfrac{\cos(lat_m)}{\sum\limits_{j=1}^{N_{lat}}\cos(lat_j)}
     $$
 
     $lat_m$ is the latitude at m.
@@ -88,18 +97,16 @@ class LatitudeWeightedRMSE(base.Metric):
         unlog: bool = False,
         scale: float = 1e-5,
     ):
-        super().__init__()
+        super().__init__(keep_batch)
         self.num_lat = num_lat
         self.std = (
             None
             if std is None
             else paddle.to_tensor(std, paddle.get_default_dtype()).reshape((1, -1))
         )
-        self.keep_batch = keep_batch
         self.variable_dict = variable_dict
         self.unlog = unlog
         self.scale = scale
-
         self.weight = self.get_latitude_weight(num_lat)
 
     def get_latitude_weight(self, num_lat: int = 720):
@@ -127,18 +134,10 @@ class LatitudeWeightedRMSE(base.Metric):
                 rmse = rmse * self.std
             if self.variable_dict is not None:
                 for variable_name, idx in self.variable_dict.items():
-                    if self.keep_batch:
-                        metric_dict[f"{key}.{variable_name}"] = rmse[:, idx]
-                    else:
-                        metric_dict[f"{key}.{variable_name}"] = float(
-                            rmse[:, idx].mean()
-                        )
+                    metric_dict[f"{key}.{variable_name}"] = (
+                        rmse[:, idx] if self.keep_batch else rmse[:, idx].mean()
+                    )
             else:
-                if self.keep_batch:
-                    rmse = rmse.mean(axis=1)
-                    metric_dict[key] = rmse
-                else:
-                    rmse = rmse.mean()
-                    metric_dict[key] = float(rmse)
+                metric_dict[key] = rmse.mean(axis=1) if self.keep_batch else rmse.mean()
 
         return metric_dict

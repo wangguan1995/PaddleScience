@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import types
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -26,9 +26,11 @@ from sympy.parsing import sympy_parser as sp_parser
 from typing_extensions import Literal
 
 from ppsci import geometry
-from ppsci import loss
 from ppsci.constraint import base
 from ppsci.data import dataset
+
+if TYPE_CHECKING:
+    from ppsci import loss
 
 
 class PeriodicConstraint(base.Constraint):
@@ -62,7 +64,7 @@ class PeriodicConstraint(base.Constraint):
         geom: geometry.Geometry,
         periodic_key: str,
         dataloader_cfg: Dict[str, Any],
-        loss: loss.Loss,
+        loss: "loss.Loss",
         random: Literal["pseudo", "LHS"] = "pseudo",
         criteria: Optional[Callable] = None,
         evenly: bool = False,
@@ -76,29 +78,35 @@ class PeriodicConstraint(base.Constraint):
 
         self.input_keys = geom.dim_keys
         self.output_keys = list(output_expr.keys())
+        # "area" will be kept in "output_dict" for computation.
+        if isinstance(geom, geometry.Mesh):
+            self.output_keys += ["area"]
 
         if isinstance(criteria, str):
             criteria = eval(criteria)
 
-        if dataloader_cfg["sampler"]["batch_size"] % 2 > 0:
+        if dataloader_cfg["batch_size"] % 2 > 0:
             raise ValueError(
                 f"batch_size({dataloader_cfg['sampler']['batch_size']}) "
-                f"should be positive and even when using PeriodicConstraint"
+                "should be positive and even when using PeriodicConstraint"
             )
-        if dataloader_cfg["sampler"]["shuffle"]:
+        if dataloader_cfg.get("shuffle", False):
             raise ValueError(
                 f"shuffle({dataloader_cfg['sampler']['batch_size']}) "
-                f"should be False when using PeriodicConstraint "
+                "should be False when using PeriodicConstraint"
             )
 
         # prepare input
-        _bs_half = dataloader_cfg["sampler"]["batch_size"] // 2
+        _bs_half = dataloader_cfg["batch_size"] // 2
         input = geom.sample_boundary(
             _bs_half * dataloader_cfg["iters_per_epoch"],
             random,
             criteria,
             evenly,
         )
+        if "area" in input:
+            input["area"] *= dataloader_cfg["iters_per_epoch"]
+
         input_periodic = geom.periodic_point(
             input,
             geom.geometry.dim_keys.index(periodic_key)

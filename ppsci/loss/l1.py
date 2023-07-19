@@ -17,6 +17,7 @@ from typing import Optional
 from typing import Union
 
 import paddle.nn.functional as F
+from typing_extensions import Literal
 
 from ppsci.loss import base
 
@@ -25,26 +26,26 @@ class L1Loss(base.Loss):
     r"""Class for l1 loss.
 
     $$
-    L =
-    \begin{cases}
-        \dfrac{1}{N}\sum\limits_{i=1}^{N}{|x_i-y_i|}, & \text{if reduction='mean'} \\
-        \sum\limits_{i=1}^{N}{|x_i-y_i|}, & \text{if reduction='sum'}
-    \end{cases}
+    L = \Vert \mathbf{x} - \mathbf{y} \Vert_1
+    $$
+
+    $$
+    \mathbf{x}, \mathbf{y} \in \mathcal{R}^{N}
     $$
 
     Args:
-        reduction (str, optional): Reduction method. Defaults to "mean".
-        weight (Optional[Union[Dict[str, float], float]]): Weight for loss. Defaults to None.
+        reduction (Literal["mean", "sum"], optional): Reduction method. Defaults to "mean".
+        weight (Optional[Union[float, Dict[str, float]]]): Weight for loss. Defaults to None.
 
     Examples:
         >>> import ppsci
-        >>> loss = ppsci.loss.L1Loss("mean")
+        >>> loss = ppsci.loss.L1Loss()
     """
 
     def __init__(
         self,
-        reduction: str = "mean",
-        weight: Optional[Union[Dict[str, float], float]] = None,
+        reduction: Literal["mean", "sum"] = "mean",
+        weight: Optional[Union[float, Dict[str, float]]] = None,
     ):
         if reduction not in ["mean", "sum"]:
             raise ValueError(
@@ -56,38 +57,57 @@ class L1Loss(base.Loss):
         losses = 0.0
         for key in label_dict:
             loss = F.l1_loss(output_dict[key], label_dict[key], "none")
-            if weight_dict is not None:
+            if weight_dict:
                 loss *= weight_dict[key]
-            if isinstance(self.weight, float):
-                loss *= self.weight
-            elif isinstance(self.weight, dict) and key in self.weight:
-                loss *= self.weight[key]
 
             if "area" in output_dict:
                 loss *= output_dict["area"]
+
+            loss = loss.sum(axis=1)
 
             if self.reduction == "sum":
                 loss = loss.sum()
             elif self.reduction == "mean":
                 loss = loss.mean()
+
+            if isinstance(self.weight, (float, int)):
+                loss *= self.weight
+            elif isinstance(self.weight, dict) and key in self.weight:
+                loss *= self.weight[key]
+
             losses += loss
         return losses
 
 
 class PeriodicL1Loss(base.Loss):
-    """Class for periodic l1 loss.
+    r"""Class for periodic l1 loss.
+
+    $$
+    L = \Vert \mathbf{x_l}-\mathbf{x_r} \Vert_1
+    $$
+
+    $\mathbf{x_l} \in \mathcal{R}^{N}$ is the first half of batch output,
+    $\mathbf{x_r} \in \mathcal{R}^{N}$ is the second half of batch output.
 
     Args:
-        reduction (str, optional): Reduction method. Defaults to "mean".
+        reduction (Literal["mean", "sum"], optional): Reduction method. Defaults to "mean".
+        weight (Optional[Union[float, Dict[str, float]]]): Weight for loss. Defaults to None.
+
+    Examples:
+        >>> import ppsci
+        >>> loss = ppsci.loss.PeriodicL1Loss("mean")
     """
 
-    def __init__(self, reduction="mean"):
-        super().__init__()
+    def __init__(
+        self,
+        reduction: Literal["mean", "sum"] = "mean",
+        weight: Optional[Union[float, Dict[str, float]]] = None,
+    ):
         if reduction not in ["mean", "sum"]:
             raise ValueError(
                 f"reduction should be 'mean' or 'sum', but got {reduction}"
             )
-        self.reduction = reduction
+        super().__init__(reduction, weight)
 
     def forward(self, output_dict, label_dict, weight_dict=None):
         losses = 0.0
@@ -102,14 +122,22 @@ class PeriodicL1Loss(base.Loss):
             loss = F.l1_loss(
                 output_dict[key][:n_output], output_dict[key][n_output:], "none"
             )
-            if weight_dict is not None:
+            if weight_dict:
                 loss *= weight_dict[key]
             if "area" in output_dict:
                 loss *= output_dict["area"]
+
+            loss = loss.sum(axis=1)
 
             if self.reduction == "sum":
                 loss = loss.sum()
             elif self.reduction == "mean":
                 loss = loss.mean()
+
+            if isinstance(self.weight, (float, int)):
+                loss *= self.weight
+            elif isinstance(self.weight, dict) and key in self.weight:
+                loss *= self.weight[key]
+
             losses += loss
         return losses

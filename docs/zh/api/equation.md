@@ -7,8 +7,10 @@
         - PDE
         - Biharmonic
         - Laplace
+        - LinearElasticity
         - NavierStokes
         - NormalDotVec
         - Poisson
+        - Vibration
       show_root_heading: false
       heading_level: 3

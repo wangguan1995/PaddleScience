@@ -29,14 +29,18 @@ class MSELoss(base.Loss):
     $$
     L =
     \begin{cases}
-        \dfrac{1}{N}\sum\limits_{i=1}^{N}{(x_i-y_i)^2}, & \text{if reduction='mean'} \\
-        \sum\limits_{i=1}^{N}{(x_i-y_i)^2}, & \text{if reduction='sum'}
+        \dfrac{1}{N} \Vert {\mathbf{x}-\mathbf{y}} \Vert_2^2, & \text{if reduction='mean'} \\
+        \Vert {\mathbf{x}-\mathbf{y}} \Vert_2^2, & \text{if reduction='sum'}
     \end{cases}
     $$
 
+    $$
+    \mathbf{x}, \mathbf{y} \in \mathcal{R}^{N}
+    $$
+
     Args:
-        reduction (str, optional): Reduction method. Defaults to "mean".
-        weight (Optional[Union[Dict[str, float], float]]): Weight for loss. Defaults to None.
+        reduction (Literal["mean", "sum"], optional): Reduction method. Defaults to "mean".
+        weight (Optional[Union[float, Dict[str, float]]]): Weight for loss. Defaults to None.
 
     Examples:
         >>> import ppsci
@@ -45,8 +49,8 @@ class MSELoss(base.Loss):
 
     def __init__(
         self,
-        reduction: str = "mean",
-        weight: Optional[Union[Dict[str, float], float]] = None,
+        reduction: Literal["mean", "sum"] = "mean",
+        weight: Optional[Union[float, Dict[str, float]]] = None,
     ):
         if reduction not in ["mean", "sum"]:
             raise ValueError(
@@ -58,12 +62,8 @@ class MSELoss(base.Loss):
         losses = 0.0
         for key in label_dict:
             loss = F.mse_loss(output_dict[key], label_dict[key], "none")
-            if weight_dict is not None:
+            if weight_dict:
                 loss *= weight_dict[key]
-            if isinstance(self.weight, (float, int)):
-                loss *= self.weight
-            elif isinstance(self.weight, dict) and key in self.weight:
-                loss *= self.weight[key]
 
             if "area" in output_dict:
                 loss *= output_dict["area"]
@@ -72,6 +72,11 @@ class MSELoss(base.Loss):
                 loss = loss.sum()
             elif self.reduction == "mean":
                 loss = loss.mean()
+            if isinstance(self.weight, (float, int)):
+                loss *= self.weight
+            elif isinstance(self.weight, dict) and key in self.weight:
+                loss *= self.weight[key]
+
             losses += loss
         return losses
 
@@ -82,16 +87,21 @@ class MSELossWithL2Decay(MSELoss):
     $$
     L =
     \begin{cases}
-        \dfrac{1}{N}\sum\limits_{i=1}^{N}{(x_i-y_i)^2} + \sum\limits_{j=1}^{M}{\Vert r_j \Vert_2^2}, & \text{if reduction='mean'} \\
-        \sum\limits_{i=1}^{N}{(x_i-y_i)^2} + \sum\limits_{j=1}^{M}{\Vert r_j \Vert_2^2}, & \text{if reduction='sum'}
+        \dfrac{1}{N} \Vert {\mathbf{x}-\mathbf{y}} \Vert_2^2 + \displaystyle\sum_{i=1}^{M}{\Vert \mathbf{K_i} \Vert_F^2}, & \text{if reduction='mean'} \\
+         \Vert {\mathbf{x}-\mathbf{y}} \Vert_2^2 + \displaystyle\sum_{i=1}^{M}{\Vert \mathbf{K_i} \Vert_F^2}, & \text{if reduction='sum'}
     \end{cases}
     $$
 
-    $M$ is the number of variables which apply regularization on.
+    $$
+    \mathbf{x}, \mathbf{y} \in \mathcal{R}^{N}, \mathbf{K_i} \in \mathcal{R}^{O_i \times P_i}
+    $$
+
+    $M$ is the number of  which apply regularization on.
 
     Args:
         reduction (Literal["mean", "sum"], optional): Specifies the reduction to apply to the output: 'mean' | 'sum'. Defaults to "mean".
         regularization_dict (Optional[Dict[str, float]]): Regularization dictionary. Defaults to None.
+        weight (Optional[Union[float, Dict[str, float]]]): Weight for loss. Defaults to None.
 
     Raises:
         ValueError: reduction should be 'mean' or 'sum'.
@@ -105,8 +115,13 @@ class MSELossWithL2Decay(MSELoss):
         self,
         reduction: Literal["mean", "sum"] = "mean",
         regularization_dict: Optional[Dict[str, float]] = None,
+        weight: Optional[Union[float, Dict[str, float]]] = None,
     ):
-        super().__init__(reduction)
+        if reduction not in ["mean", "sum"]:
+            raise ValueError(
+                f"reduction should be 'mean' or 'sum', but got {reduction}"
+            )
+        super().__init__(reduction, weight)
         self.regularization_dict = regularization_dict
 
     def forward(self, output_dict, label_dict, weight_dict=None):
@@ -120,19 +135,34 @@ class MSELossWithL2Decay(MSELoss):
 
 
 class PeriodicMSELoss(base.Loss):
-    """Class for periodic mean squared error loss.
+    r"""Class for periodic mean squared error loss.
+
+    $$
+    L =
+    \begin{cases}
+        \dfrac{1}{N} \Vert \mathbf{x_l}-\mathbf{x_r} \Vert_2^2, & \text{if reduction='mean'} \\
+        \Vert \mathbf{x_l}-\mathbf{x_r} \Vert_2^2, & \text{if reduction='sum'}
+    \end{cases}
+    $$
+
+    $\mathbf{x_l} \in \mathcal{R}^{N}$ is the first half of batch output,
+    $\mathbf{x_r} \in \mathcal{R}^{N}$ is the second half of batch output.
 
     Args:
-        reduction (str, optional): Reduction method. Defaults to "mean".
+        reduction (Literal["mean", "sum"], optional): Reduction method. Defaults to "mean".
+        weight (Optional[Union[float, Dict[str, float]]]): Weight for loss. Defaults to None.
     """
 
-    def __init__(self, reduction="mean"):
-        super().__init__()
+    def __init__(
+        self,
+        reduction: Literal["mean", "sum"] = "mean",
+        weight: Optional[Union[float, Dict[str, float]]] = None,
+    ):
         if reduction not in ["mean", "sum"]:
             raise ValueError(
                 f"reduction should be 'mean' or 'sum', but got {reduction}"
             )
-        self.reduction = reduction
+        super().__init__(reduction, weight)
 
     def forward(self, output_dict, label_dict, weight_dict=None):
         losses = 0.0
@@ -147,7 +177,7 @@ class PeriodicMSELoss(base.Loss):
             loss = F.mse_loss(
                 output_dict[key][:n_output], output_dict[key][n_output:], "none"
             )
-            if weight_dict is not None:
+            if weight_dict:
                 loss *= weight_dict[key]
             if "area" in output_dict:
                 loss *= output_dict["area"]
@@ -156,5 +186,11 @@ class PeriodicMSELoss(base.Loss):
                 loss = loss.sum()
             elif self.reduction == "mean":
                 loss = loss.mean()
+
+            if isinstance(self.weight, (float, int)):
+                loss *= self.weight
+            elif isinstance(self.weight, dict) and key in self.weight:
+                loss *= self.weight[key]
+
             losses += loss
         return losses

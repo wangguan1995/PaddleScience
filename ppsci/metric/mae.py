@@ -22,7 +22,11 @@ class MAE(base.Metric):
     r"""Mean absolute error.
 
     $$
-    metric = \dfrac{1}{N}\sum\limits_{i=1}^{N}{|x_i-y_i|}
+    metric = \dfrac{1}{N} \Vert \mathbf{x} - \mathbf{y} \Vert_1
+    $$
+
+    $$
+    \mathbf{x}, \mathbf{y} \in \mathcal{R}^{N}
     $$
 
     Args:
@@ -34,8 +38,7 @@ class MAE(base.Metric):
     """
 
     def __init__(self, keep_batch: bool = False):
-        super().__init__()
-        self.keep_batch = keep_batch
+        super().__init__(keep_batch)
 
     @paddle.no_grad()
     def forward(self, output_dict, label_dict):
@@ -45,6 +48,6 @@ class MAE(base.Metric):
             if self.keep_batch:
                 metric_dict[key] = mae.mean(axis=tuple(range(1, mae.ndim)))
             else:
-                metric_dict[key] = float(mae.mean())
+                metric_dict[key] = mae.mean()
 
         return metric_dict

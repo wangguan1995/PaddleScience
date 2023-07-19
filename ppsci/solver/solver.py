@@ -15,10 +15,11 @@
 from __future__ import annotations
 
 import contextlib
-import copy
+import itertools
 import os
 import sys
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Optional
 from typing import Union
@@ -29,6 +30,7 @@ import paddle.distributed as dist
 import visualdl as vdl
 from packaging import version
 from paddle import amp
+from paddle import jit
 from paddle import nn
 from paddle import optimizer as optim
 from paddle.distributed import fleet
@@ -36,6 +38,7 @@ from typing_extensions import Literal
 
 import ppsci
 from ppsci.utils import config
+from ppsci.utils import expression
 from ppsci.utils import logger
 from ppsci.utils import misc
 from ppsci.utils import save_load
@@ -47,7 +50,7 @@ class Solver:
     Args:
         model (nn.Layer): Model.
         constraint (Optional[Dict[str, ppsci.constraint.Constraint]]): Constraint(s) applied on model. Defaults to None.
-        output_dir (str, optional): Output directory. Defaults to "./output/".
+        output_dir (Optional[str]): Output directory. Defaults to "./output/".
         optimizer (Optional[optimizer.Optimizer]): Optimizer object. Defaults to None.
         lr_scheduler (Optional[optimizer.lr.LRScheduler]): Learning rate scheduler. Defaults to None.
         epochs (int, optional): Training epoch(s). Defaults to 5.
@@ -59,7 +62,9 @@ class Solver:
         start_eval_epoch (int, optional): Epoch number evaluation applied begin after. Defaults to 1.
         eval_freq (int, optional): Evaluation frequency. Defaults to 1.
         seed (int, optional): Random seed. Defaults to 42.
-        vdl_writer (Optional[vdl.LogWriter]): VisualDL writer object. Defaults to None.
+        use_vdl (Optional[bool]): Whether use VisualDL to log scalars. Defaults to False.
+        use_wandb (Optional[bool]): Whether use wandb to log data. Defaults to False.
+        wandb_cfg (Optional[Dict[str, str]]): Config dict of wandb. Defaults to None.
         device (Literal["cpu", "gpu", "xpu"], optional): Runtime device. Defaults to "gpu".
         equation (Optional[Dict[str, ppsci.equation.PDE]]): Equation dict. Defaults to None.
         geom (Optional[Dict[str, ppsci.geometry.Geometry]]): Geometry dict. Defaults to None.
@@ -72,6 +77,7 @@ class Solver:
         compute_metric_by_batch (bool, optional): Whether calculate metrics after each batch during evaluate. Defaults to False.
         eval_with_no_grad (bool, optional): Whether set `stop_gradient=True` for every Tensor if no differentiation
             involved during computation, generally for save GPU memory and accelerate computing. Defaults to False.
+        to_static (bool, optional): Whether enable to_static for forward pass. Defaults to False.
 
     Examples:
         >>> import ppsci
@@ -96,14 +102,14 @@ class Solver:
         ...     "./output",
         ...     opt,
         ...     None,
-        ... )
+        ... )  # doctest: +SKIP
     """
 
     def __init__(
         self,
         model: nn.Layer,
         constraint: Optional[Dict[str, ppsci.constraint.Constraint]] = None,
-        output_dir: str = "./output/",
+        output_dir: Optional[str] = "./output/",
         optimizer: Optional[optim.Optimizer] = None,
         lr_scheduler: Optional[optim.lr.LRScheduler] = None,
         epochs: int = 5,
@@ -115,7 +121,9 @@ class Solver:
         start_eval_epoch: int = 1,
         eval_freq: int = 1,
         seed: int = 42,
-        vdl_writer: Optional[vdl.LogWriter] = None,
+        use_vdl: bool = False,
+        use_wandb: bool = False,
+        wandb_config: Optional[Dict[str, str]] = None,
         device: Literal["cpu", "gpu", "xpu"] = "gpu",
         equation: Optional[Dict[str, ppsci.equation.PDE]] = None,
         geom: Optional[Dict[str, ppsci.geometry.Geometry]] = None,
@@ -127,6 +135,7 @@ class Solver:
         checkpoint_path: Optional[str] = None,
         compute_metric_by_batch: bool = False,
         eval_with_no_grad: bool = False,
+        to_static: bool = False,
     ):
         # set model
         self.model = model
@@ -173,12 +182,30 @@ class Solver:
         self.seed = seed
 
         # set VisualDL tool
-        self.vdl_writer = vdl_writer
+        self.vdl_writer = None
+        if use_vdl:
+            self.vdl_writer = vdl.LogWriter(f"{output_dir}/vdl")
+        # set WandB tool
+        self.wandb_writer = None
+        if use_wandb:
+            try:
+                import wandb
+            except ModuleNotFoundError:
+                raise ModuleNotFoundError(
+                    "Please install 'wandb' with `pip install wandb` first."
+                )
+            wandb.init(**wandb_config)
+            self.wandb_writer = wandb
 
         # set running device
+        if device != "cpu" and paddle.device.get_device() == "cpu":
+            logger.warning(f"Set device({device}) to 'cpu' for only cpu available.")
+            device = "cpu"
         self.device = paddle.set_device(device)
+
         # set equations for physics-driven or data-physics hybrid driven task, such as PINN
         self.equation = equation
+
         # set geometry for generating data
         self.geom = {} if geom is None else geom
 
@@ -199,8 +226,24 @@ class Solver:
 
         # whether calculate metrics after each batch during evaluate
         self.compute_metric_by_batch = compute_metric_by_batch
+        if validator is not None:
+            for metric in itertools.chain(
+                *[_v.metric.values() for _v in self.validator.values()]
+            ):
+                if metric.keep_batch ^ compute_metric_by_batch:
+                    raise ValueError(
+                        f"{misc.typename(metric)}.keep_batch should be "
+                        f"{compute_metric_by_batch} when compute_metric_by_batch="
+                        f"{compute_metric_by_batch}."
+                    )
         # whether set `stop_gradient=True` for every Tensor if no differentiation involved during computation
         self.eval_with_no_grad = eval_with_no_grad
+
+        # decorate model(s) and optimizer(s) for AMP
+        if self.use_amp:
+            self.model, self.optimizer = amp.decorate(
+                self.model, self.optimizer, self.amp_level
+            )
 
         # initialize an dict for tracking best metric during training
         self.best_metric = {
@@ -215,15 +258,18 @@ class Solver:
             if isinstance(loaded_metric, dict):
                 self.best_metric.update(loaded_metric)
 
+        # init logger without FileHandler if not initialized before
+        if logger._logger is None:
+            logger.init_logger("ppsci", None)
+
         # choosing an appropriate training function for different optimizers
         if isinstance(self.optimizer, optim.LBFGS):
             self.train_epoch_func = ppsci.solver.train.train_LBFGS_epoch_func
+            if self.update_freq != 1:
+                self.update_freq = 1
+                logger.warning("Set update_freq to to 1 when using L-BFGS optimizer.")
         else:
             self.train_epoch_func = ppsci.solver.train.train_epoch_func
-
-        # decorate model(s) and optimizer(s) for AMP
-        if self.use_amp:
-            self.model = amp.decorate(self.model, self.optimizer, self.amp_level)
 
         # wrap model and optimizer to parallel object
         self.rank = dist.get_rank()
@@ -234,6 +280,11 @@ class Solver:
             self.model = fleet.distributed_model(self.model)
             if self.optimizer is not None:
                 self.optimizer = fleet.distributed_optimizer(self.optimizer)
+            logger.warning(
+                f"Detected world_size({self.world_size}) > 1, it is recommended to "
+                "scale up the learning rate and reduce the epochs or "
+                "iters_per_epoch according to the world_size both linearly."
+            )
 
         self.global_step = 0
 
@@ -243,8 +294,13 @@ class Solver:
             if version.Version(paddle.__version__) != version.Version("0.0.0")
             else f"develop({paddle.version.commit[:7]})"
         )
-        if logger._logger is not None:
-            logger.info(f"Using paddlepaddle {paddle_version} on device {self.device}")
+        logger.info(f"Using paddlepaddle {paddle_version} on device {self.device}")
+
+        self.forward_helper = expression.ExpressionSolver()
+
+        # whether enable static for forward pass, default to Fals
+        jit.enable_to_static(to_static)
+        logger.info(f"Set to_static={to_static} for forward computation.")
 
     @staticmethod
     def from_config(cfg: Dict[str, Any]) -> Solver:
@@ -336,7 +392,7 @@ class Solver:
         )
 
     def train(self):
-        """Training"""
+        """Training."""
         self.global_step = self.best_metric["epoch"] * self.iters_per_epoch + 1
 
         for epoch_id in range(self.best_metric["epoch"] + 1, self.epochs + 1):
@@ -375,6 +431,7 @@ class Solver:
                 )
                 logger.scaler("eval_metric", cur_metric, epoch_id, self.vdl_writer)
 
+                # visualize after evaluation
                 if self.visualizer is not None:
                     self.visualize(epoch_id)
 
@@ -394,7 +451,7 @@ class Solver:
                     self.equation,
                 )
 
-            # always save the latest model for convenient resume training
+            # save the latest model for convenient resume training
             save_load.save_checkpoint(
                 self.model,
                 self.optimizer,
@@ -409,12 +466,16 @@ class Solver:
         if self.vdl_writer is not None:
             self.vdl_writer.close()
 
-    def eval(self, epoch_id: int = 0):
-        """Evaluation"""
-        train_state = self.model.training
-        if train_state:
-            self.model.eval()
+    @misc.run_on_eval_mode
+    def eval(self, epoch_id: int = 0) -> float:
+        """Evaluation.
 
+        Args:
+            epoch_id (int, optional): Epoch id. Defaults to 0.
+
+        Returns:
+            float: The value of the evaluation, used to judge the quality of the model.
+        """
         # set eval func
         self.eval_func = ppsci.solver.eval.eval_func
 
@@ -425,123 +486,158 @@ class Solver:
         logger.info(f"[Eval][Epoch {epoch_id}][Avg] {metric_msg}")
         self.eval_output_info.clear()
 
-        if train_state:
-            self.model.train()
         return result
 
+    @misc.run_on_eval_mode
     def visualize(self, epoch_id: int = 0):
-        """Visualization"""
-        train_state = self.model.training
-        if train_state:
-            self.model.eval()
+        """Visualization.
 
-        # init train func
+        Args:
+            epoch_id (int, optional): Epoch id. Defaults to 0.
+        """
+        # set visualize func
         self.visu_func = ppsci.solver.visu.visualize_func
 
         self.visu_func(self, epoch_id)
-        logger.info(f"[Visualize][Epoch {epoch_id}] Finished visualization.")
+        logger.info(f"[Visualize][Epoch {epoch_id}] Finished visualization")
 
-        if train_state:
-            self.model.train()
-
-    @paddle.no_grad()
+    @misc.run_on_eval_mode
     def predict(
         self,
         input_dict: Dict[str, Union[np.ndarray, paddle.Tensor]],
+        expr_dict: Optional[Dict[str, Callable]] = None,
         batch_size: int = 64,
+        no_grad: bool = True,
     ) -> Dict[str, paddle.Tensor]:
-        """Pure prediction using model.forward(...), support single device prediction yet.
+        """Pure prediction using model.forward(...) and expression(optional, if given).
 
         Args:
             input_dict (Dict[str, Union[np.ndarray, paddle.Tensor]]): Input data in dict.
+            expr_dict (Optional[Dict[str, Callable]]): Expression dict, which guide to
+                compute equation variable with callable function. Defaults to None.
             batch_size (int, optional): Predicting by batch size. Defaults to 64.
+            no_grad (bool): Whether set stop_gradient=True for entire prediction, mainly
+                for memory-efficiency. Defaults to True.
 
         Returns:
             Dict[str, paddle.Tensor]: Prediction in dict.
         """
-        train_state = self.model.training
-        if train_state:
-            self.model.eval()
-
-        if self.world_size > 1:
-            raise NotImplementedError(
-                "Solver.predict only support single device yet, "
-                f"but got {self.world_size} devices."
-            )
-
         num_samples = len(next(iter(input_dict.values())))
-        batch_num = (num_samples + (batch_size - 1)) // batch_size
+        num_pad = (self.world_size - num_samples % self.world_size) % self.world_size
+        # pad with last element if `num_samples` is not divisible by `world_size`
+        # ensuring every device get same number of data.
+        if num_pad > 0:
+            for k, v in input_dict.items():
+                repeat_times = (num_pad, *(1 for _ in range(v.ndim - 1)))
+                input_dict[k] = paddle.concat(
+                    (
+                        v,
+                        paddle.tile(v[num_samples - 1 : num_samples], repeat_times),
+                    ),
+                )
+
+        num_samples_pad = num_samples + num_pad
+        local_num_samples_pad = num_samples_pad // self.world_size
+        local_input_dict = (
+            {k: v[self.rank :: self.world_size] for k, v in input_dict.items()}
+            if self.world_size > 1
+            else input_dict
+        )
+        local_batch_num = (local_num_samples_pad + (batch_size - 1)) // batch_size
         pred_dict = misc.Prettydefaultdict(list)
-        for batch_id in range(batch_num):
-            batch_input_dict = {}
-            st = batch_id * batch_size
-            ed = min(num_samples, (batch_id + 1) * batch_size)
+        with self.no_grad_context_manager(no_grad), self.no_sync_context_manager(
+            self.world_size > 1, self.model
+        ):
+            for batch_id in range(local_batch_num):
+                batch_input_dict = {}
+                st = batch_id * batch_size
+                ed = min(local_num_samples_pad, (batch_id + 1) * batch_size)
 
-            # prepare batch input dict
-            for key in input_dict:
-                if not paddle.is_tensor(input_dict[key]):
-                    batch_input_dict[key] = paddle.to_tensor(
-                        input_dict[key][st:ed], paddle.get_default_dtype()
+                # prepare batch input dict
+                for key in local_input_dict:
+                    if not paddle.is_tensor(local_input_dict[key]):
+                        batch_input_dict[key] = paddle.to_tensor(
+                            local_input_dict[key][st:ed], paddle.get_default_dtype()
+                        )
+                    else:
+                        batch_input_dict[key] = local_input_dict[key][st:ed]
+                    batch_input_dict[key].stop_gradient = no_grad
+
+                # forward
+                with self.autocast_context_manager(self.use_amp, self.amp_level):
+                    batch_output_dict = self.forward_helper.visu_forward(
+                        expr_dict, batch_input_dict, self.model
                     )
-                else:
-                    batch_input_dict[key] = input_dict[key][st:ed]
-                batch_input_dict[key].stop_gradient = False
 
-            # forward
-            with self.autocast_context_manager():
-                batch_output_dict = self.model(batch_input_dict)
+                # collect batch data
+                for key, batch_output in batch_output_dict.items():
+                    pred_dict[key].append(batch_output.detach())
 
-            # collect batch data
-            for key, batch_output in batch_output_dict.items():
-                pred_dict[key].append(batch_output)
+            # concatenate local predictions
+            pred_dict = {key: paddle.concat(value) for key, value in pred_dict.items()}
 
-        pred_dict = {key: paddle.concat(value) for key, value in pred_dict.items()}
+            if self.world_size > 1:
+                # gather global predictions from all devices if world_size > 1
+                pred_dict = {
+                    key: misc.all_gather(value) for key, value in pred_dict.items()
+                }
 
-        if train_state:
-            self.model.train()
+                # rearange predictions as the same order of input_dict according to inverse
+                # permutation, then discard predictions of padding data at the end
+                perm = np.arange(num_samples_pad, dtype="int64")
+                perm = np.concatenate(
+                    [perm[rank :: self.world_size] for rank in range(self.world_size)],
+                    axis=0,
+                )
+                perm_inv = np.empty_like(perm)
+                perm_inv[perm] = np.arange(num_samples_pad, dtype="int64")
+                perm_inv = paddle.to_tensor(perm_inv)
+                pred_dict = {
+                    key: value[perm_inv][:num_samples]
+                    for key, value in pred_dict.items()
+                }
+
         return pred_dict
 
+    @misc.run_on_eval_mode
     def export(self):
-        """Export to inference model"""
-        pretrained_path = self.cfg["Global"]["pretrained_model"]
-        if pretrained_path is not None:
-            save_load.load_pretrain(self.model, pretrained_path, self.equation)
+        """Export to inference model."""
+        raise NotImplementedError("model export is not supported yet.")
 
-        self.model.eval()
+    def autocast_context_manager(
+        self, enable: bool, level: Literal["O0", "O1", "O2"] = "O1"
+    ) -> contextlib.AbstractContextManager:
+        """Smart autocast context manager for Auto Mix Precision.
 
-        input_spec = copy.deepcopy(self.cfg["Export"]["input_shape"])
-        config.replace_shape_with_inputspec_(input_spec)
-        static_model = paddle.jit.to_static(self.model, input_spec=input_spec)
-
-        export_dir = self.cfg["Global"]["save_inference_dir"]
-        save_path = os.path.join(export_dir, "inference")
-        paddle.jit.save(static_model, save_path)
-        logger.info(f"The inference model has been exported to {export_dir}.")
-
-    def autocast_context_manager(self) -> contextlib.AbstractContextManager:
-        """Autocast context manager for Auto Mix Precision.
+        Args:
+            enable (bool): Enable autocast.
+            level (Literal["O0", "O1", "O2"]): Autocast level.
 
         Returns:
-            Union[contextlib.AbstractContextManager]: Context manager.
+            contextlib.AbstractContextManager: Smart autocast context manager.
         """
-        if self.use_amp:
-            ctx_manager = amp.auto_cast(level=self.amp_level)
+        if enable:
+            ctx_manager = amp.auto_cast(level=level)
         else:
             ctx_manager = (
                 contextlib.nullcontext()
                 if sys.version_info >= (3, 7)
                 else contextlib.suppress()
             )
-
         return ctx_manager
 
-    def no_grad_context_manager(self) -> contextlib.AbstractContextManager:
-        """No grad manager.
+    def no_grad_context_manager(
+        self, enable: bool
+    ) -> contextlib.AbstractContextManager:
+        """Smart no_grad context manager.
+
+        Args:
+            enable (bool): Enable no_grad.
 
         Returns:
-            Union[contextlib.AbstractContextManager]: Context manager.
+            contextlib.AbstractContextManager: Smart no_grad context manager.
         """
-        if self.eval_with_no_grad:
+        if enable:
             ctx_manager = paddle.no_grad()
         else:
             ctx_manager = (
@@ -549,5 +645,33 @@ class Solver:
                 if sys.version_info >= (3, 7)
                 else contextlib.suppress()
             )
+        return ctx_manager
 
+    def no_sync_context_manager(
+        self,
+        enable: bool,
+        ddp_model: paddle.DataParallel,
+    ) -> contextlib.AbstractContextManager:
+        """Smart no_sync context manager for given model.
+        NOTE: Only `paddle.DataParallel` object has `no_sync` interface.
+
+        Args:
+            enable (bool): Enable no_sync.
+
+        Returns:
+            contextlib.AbstractContextManager: Smart no_sync context manager.
+        """
+        if enable:
+            if not isinstance(ddp_model, paddle.DataParallel):
+                raise TypeError(
+                    "no_sync interface is only for model with type paddle.DataParallel, "
+                    f"but got type {misc.typename(ddp_model)}"
+                )
+            ctx_manager = ddp_model.no_sync()
+        else:
+            ctx_manager = (
+                contextlib.nullcontext()
+                if sys.version_info >= (3, 7)
+                else contextlib.suppress()
+            )
         return ctx_manager

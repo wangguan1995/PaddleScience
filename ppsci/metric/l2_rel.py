@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import paddle
 
 from ppsci.metric import base
@@ -21,24 +22,38 @@ class L2Rel(base.Metric):
     r"""Class for l2 relative error.
 
     $$
-    metric = \dfrac{\Vert x-y \Vert_2}{\Vert y \Vert_2}
+    metric = \dfrac{\Vert \mathbf{x} - \mathbf{y} \Vert_2}{\Vert \max(\mathbf{y}, \epsilon) \Vert_2}
     $$
+
+    $$
+    \mathbf{x}, \mathbf{y} \in \mathcal{R}^{N}
+    $$
+
+    Args:
+        keep_batch (bool, optional): Whether keep batch axis. Defaults to False.
 
     Examples:
         >>> import ppsci
         >>> metric = ppsci.metric.L2Rel()
     """
 
-    def __init__(self):
-        super().__init__()
+    # NOTE: Avoid divide by zero in result
+    # see https://github.com/scikit-learn/scikit-learn/pull/15007
+    EPS: float = np.finfo(np.float32).eps
+
+    def __init__(self, keep_batch: bool = False):
+        if keep_batch:
+            raise ValueError(f"keep_batch should be False, but got {keep_batch}.")
+        super().__init__(keep_batch)
 
     @paddle.no_grad()
     def forward(self, output_dict, label_dict):
         metric_dict = {}
         for key in label_dict:
-            rel_l2 = paddle.norm(label_dict[key] - output_dict[key]) / paddle.norm(
-                label_dict[key]
-            )
-            metric_dict[key] = float(rel_l2)
+            rel_l2 = (
+                paddle.norm(label_dict[key] - output_dict[key], p=2, axis=1)
+                / paddle.norm(label_dict[key], p=2, axis=1).clip(min=self.EPS)
+            ).mean()
+            metric_dict[key] = rel_l2
 
         return metric_dict

@@ -13,18 +13,22 @@
 # limitations under the License.
 
 import time
+from typing import TYPE_CHECKING
 
 import paddle
 from paddle import io
 
 from ppsci.solver import printer
-from ppsci.utils import expression
 from ppsci.utils import misc
-from ppsci.utils import profiler
+
+# from ppsci.utils import profiler
+
+if TYPE_CHECKING:
+    from ppsci import solver
 
 
-def eval_by_dataset(solver, epoch_id: int, log_freq: int) -> float:
-    """Evaluation program by dataset.
+def _eval_by_dataset(solver: "solver.Solver", epoch_id: int, log_freq: int) -> float:
+    """Evaluate with computing metric on total samples.
 
     Args:
         solver (solver.Solver): Main Solver.
@@ -56,19 +60,21 @@ def eval_by_dataset(solver, epoch_id: int, log_freq: int) -> float:
                 for key in solver.eval_time_info:
                     solver.eval_time_info[key].reset()
             reader_cost = time.perf_counter() - reader_tic
-
             for v in input_dict.values():
                 v.stop_gradient = False
-            evaluator = expression.ExpressionSolver(
-                _validator.input_keys, _validator.output_keys, solver.model
-            )
-            for output_name, output_formula in _validator.output_expr.items():
-                evaluator.add_target_expr(output_formula, output_name)
 
             # forward
-            with solver.autocast_context_manager(), solver.no_grad_context_manager():
-                output_dict = evaluator(input_dict)
-                validator_loss = _validator.loss(output_dict, label_dict, weight_dict)
+            with solver.autocast_context_manager(
+                solver.use_amp, solver.amp_level
+            ), solver.no_grad_context_manager(solver.eval_with_no_grad):
+                output_dict, validator_loss = solver.forward_helper.eval_forward(
+                    _validator.output_expr,
+                    input_dict,
+                    solver.model,
+                    _validator,
+                    label_dict,
+                    weight_dict,
+                )
 
             loss_dict[f"loss({_validator.name})"] = float(validator_loss)
 
@@ -95,12 +101,12 @@ def eval_by_dataset(solver, epoch_id: int, log_freq: int) -> float:
             batch_cost = time.perf_counter() - batch_tic
             solver.eval_time_info["reader_cost"].update(reader_cost)
             solver.eval_time_info["batch_cost"].update(batch_cost)
-            total_batch_size = sum([v.shape[0] for v in input_dict.values()])
-            printer.update_eval_loss(solver, loss_dict, total_batch_size)
+            batch_size = next(iter(input_dict.values())).shape[0]
+            printer.update_eval_loss(solver, loss_dict, batch_size)
             if iter_id == 1 or iter_id % log_freq == 0:
                 printer.log_eval_info(
                     solver,
-                    total_batch_size,
+                    batch_size,
                     epoch_id,
                     len(_validator.data_loader),
                     iter_id,
@@ -109,7 +115,7 @@ def eval_by_dataset(solver, epoch_id: int, log_freq: int) -> float:
             reader_tic = time.perf_counter()
             batch_tic = time.perf_counter()
 
-        # gather all data
+        # concate all data and discard padded sample(s)
         for key in all_input:
             all_input[key] = paddle.concat(all_input[key])
             if len(all_input[key]) > num_samples:
@@ -133,22 +139,22 @@ def eval_by_dataset(solver, epoch_id: int, log_freq: int) -> float:
                     solver.eval_output_info[metric_str] = misc.AverageMeter(
                         metric_str, ".5f"
                     )
-                solver.eval_output_info[metric_str].update(metric_value, num_samples)
+                solver.eval_output_info[metric_str].update(
+                    float(metric_value), num_samples
+                )
 
+        # use the first metric for return value
         if target_metric is None:
             tmp = metric
             while isinstance(tmp, dict):
                 tmp = next(iter(tmp.values()))
-            assert isinstance(
-                tmp, (int, float)
-            ), f"Target metric({type(tmp)}) should be a number"
-            target_metric = tmp
+            target_metric = float(tmp)
 
     return target_metric
 
 
-def eval_by_batch(solver, epoch_id: int, log_freq: int) -> float:
-    """Evaluation program by batch.
+def _eval_by_batch(solver: "solver.Solver", epoch_id: int, log_freq: int) -> float:
+    """Evaluate with computing metric by batch, which is memory-efficient.
 
     Args:
         solver (solver.Solver): Main Solver.
@@ -178,20 +184,22 @@ def eval_by_batch(solver, epoch_id: int, log_freq: int) -> float:
                 for key in solver.eval_time_info:
                     solver.eval_time_info[key].reset()
             reader_cost = time.perf_counter() - reader_tic
-            total_batch_size = next(iter(input_dict.values())).shape[0]
-
+            batch_size = next(iter(input_dict.values())).shape[0]
             for v in input_dict.values():
                 v.stop_gradient = False
-            evaluator = expression.ExpressionSolver(
-                _validator.input_keys, _validator.output_keys, solver.model
-            )
-            for output_name, output_formula in _validator.output_expr.items():
-                evaluator.add_target_expr(output_formula, output_name)
 
             # forward
-            with solver.autocast_context_manager(), solver.no_grad_context_manager():
-                output_dict = evaluator(input_dict)
-                validator_loss = _validator.loss(output_dict, label_dict, weight_dict)
+            with solver.autocast_context_manager(
+                solver.use_amp, solver.amp_level
+            ), solver.no_grad_context_manager(solver.eval_with_no_grad):
+                output_dict, validator_loss = solver.forward_helper.eval_forward(
+                    _validator.output_expr,
+                    input_dict,
+                    solver.model,
+                    _validator,
+                    label_dict,
+                    weight_dict,
+                )
 
             loss_dict[f"loss({_validator.name})"] = float(validator_loss)
 
@@ -210,11 +218,11 @@ def eval_by_batch(solver, epoch_id: int, log_freq: int) -> float:
             batch_cost = time.perf_counter() - batch_tic
             solver.eval_time_info["reader_cost"].update(reader_cost)
             solver.eval_time_info["batch_cost"].update(batch_cost)
-            printer.update_eval_loss(solver, loss_dict, total_batch_size)
+            printer.update_eval_loss(solver, loss_dict, batch_size)
             if iter_id == 1 or iter_id % log_freq == 0:
                 printer.log_eval_info(
                     solver,
-                    total_batch_size,
+                    batch_size,
                     epoch_id,
                     len(_validator.data_loader),
                     iter_id,
@@ -223,7 +231,7 @@ def eval_by_batch(solver, epoch_id: int, log_freq: int) -> float:
             reader_tic = time.perf_counter()
             batch_tic = time.perf_counter()
 
-        # gather all metric
+        # concate all metric and discard metric of padded sample(s)
         for metric_name, metric_dict in metric.items():
             for var_name, metric_value in metric_dict.items():
                 metric_value = paddle.concat(metric_value)[:num_samples]
@@ -236,20 +244,18 @@ def eval_by_batch(solver, epoch_id: int, log_freq: int) -> float:
                     )
                 solver.eval_output_info[metric_str].update(metric_value, num_samples)
 
+        # use the first metric for return value
         if target_metric is None:
             tmp = metric
             while isinstance(tmp, dict):
                 tmp = next(iter(tmp.values()))
-            assert isinstance(
-                tmp, (int, float)
-            ), f"Target metric({type(tmp)}) should be a number"
             target_metric = tmp
 
     return target_metric
 
 
-def eval_func(solver, epoch_id: int, log_freq: int) -> float:
-    """Evaluation program
+def eval_func(solver: "solver.Solver", epoch_id: int, log_freq: int) -> float:
+    """Evaluation function.
 
     Args:
         solver (solver.Solver): Main Solver.
@@ -260,5 +266,5 @@ def eval_func(solver, epoch_id: int, log_freq: int) -> float:
         float: Target metric computed during evaluation.
     """
     if solver.compute_metric_by_batch:
-        return eval_by_batch(solver, epoch_id, log_freq)
-    return eval_by_dataset(solver, epoch_id, log_freq)
+        return _eval_by_batch(solver, epoch_id, log_freq)
+    return _eval_by_dataset(solver, epoch_id, log_freq)

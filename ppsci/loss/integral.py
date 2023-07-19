@@ -17,26 +17,29 @@ from typing import Optional
 from typing import Union
 
 import paddle.nn.functional as F
+from typing_extensions import Literal
 
 from ppsci.loss import base
 
 
 class IntegralLoss(base.Loss):
-    r"""Class for integral loss with monte carlo integration algorithm.
+    r"""Class for integral loss with Monte-Carlo integration algorithm.
 
     $$
     L =
     \begin{cases}
-        \dfrac{1}{N}\sum\limits_{i=1}^{N}{(\sum\limits_{j=1}^{M}{(x_i^j s_{j})}-y_i)^2}, & \text{if reduction='mean'} \\
-        \sum\limits_{i=1}^{N}{(\sum\limits_{j=1}^{M}{(x_i^j s_{j})}-y_i)^2}, & \text{if reduction='sum'}
+        \dfrac{1}{N} \Vert \displaystyle\sum_{i=1}^{M}{\mathbf{s}_i \cdot \mathbf{x}_i} - \mathbf{y} \Vert_2^2, & \text{if reduction='mean'} \\
+         \Vert \displaystyle\sum_{i=0}^{M}{\mathbf{s}_i \cdot \mathbf{x}_i} - \mathbf{y} \Vert_2^2, & \text{if reduction='sum'}
     \end{cases}
     $$
 
-    $M$ is the number of samples in monte carlo integration.
+    $$
+    \mathbf{x}, \mathbf{s} \in \mathcal{R}^{M \times N}, \mathbf{y} \in \mathcal{R}^{N}
+    $$
 
     Args:
-        reduction (str, optional): Reduction method. Defaults to "mean".
-        weight (Optional[Union[Dict[str, float], float]]): Weight for loss. Defaults to None.
+        reduction (Literal["mean", "sum"], optional): Reduction method. Defaults to "mean".
+        weight (Optional[Union[float, Dict[str, float]]]): Weight for loss. Defaults to None.
 
     Examples:
         >>> import ppsci
@@ -45,8 +48,8 @@ class IntegralLoss(base.Loss):
 
     def __init__(
         self,
-        reduction: str = "mean",
-        weight: Optional[Union[Dict[str, float], float]] = None,
+        reduction: Literal["mean", "sum"] = "mean",
+        weight: Optional[Union[float, Dict[str, float]]] = None,
     ):
         if reduction not in ["mean", "sum"]:
             raise ValueError(
@@ -62,7 +65,7 @@ class IntegralLoss(base.Loss):
                 label_dict[key],
                 "none",
             )
-            if weight_dict is not None:
+            if weight_dict:
                 loss *= weight_dict[key]
             if isinstance(self.weight, float):
                 loss *= self.weight
@@ -73,5 +76,11 @@ class IntegralLoss(base.Loss):
                 loss = loss.sum()
             elif self.reduction == "mean":
                 loss = loss.mean()
+
+            if isinstance(self.weight, (float, int)):
+                loss *= self.weight
+            elif isinstance(self.weight, dict) and key in self.weight:
+                loss *= self.weight[key]
+
             losses += loss
         return losses

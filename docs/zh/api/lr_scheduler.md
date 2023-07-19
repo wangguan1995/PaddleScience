@@ -4,7 +4,6 @@
     handler: python
     options:
       members:
-        - ConstLR
         - Linear
         - Cosine
         - Step
@@ -12,5 +11,6 @@
         - MultiStepDecay
         - ExponentialDecay
         - CosineWarmRestarts
+        - OneCycleLR
       show_root_heading: false
       heading_level: 3

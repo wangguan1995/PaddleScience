@@ -20,7 +20,6 @@ from typing import Union
 
 import imageio
 import matplotlib
-import matplotlib as mpl
 import numpy as np
 import paddle
 from matplotlib import cm
@@ -166,7 +165,7 @@ def _save_plot_from_2d_array(
     Args:
         filename (str): Filename.
         visu_data (Tuple[np.ndarray, ...]): Data that requires visualization.
-        visu_keys (Tuple[str, ...]]): Keys for visualizing data. such as ("u", "v").
+        visu_keys (Tuple[str, ...]): Keys for visualizing data. such as ("u", "v").
         num_timestamps (int, optional): Number of timestamps coord/value contains. Defaults to 1.
         stride (int, optional): The time stride of visualization. Defaults to 1.
         xticks (Optional[Tuple[float, ...]]): Tuple of xtick locations. Defaults to None.
@@ -174,8 +173,8 @@ def _save_plot_from_2d_array(
     """
 
     plt.close("all")
-    mpl.rcParams["xtick.labelsize"] = 5
-    mpl.rcParams["ytick.labelsize"] = 5
+    matplotlib.rcParams["xtick.labelsize"] = 5
+    matplotlib.rcParams["ytick.labelsize"] = 5
 
     fig, ax = plt.subplots(
         len(visu_keys),
@@ -185,7 +184,7 @@ def _save_plot_from_2d_array(
         figsize=(num_timestamps, len(visu_keys)),
     )
     fig.subplots_adjust(hspace=0.3)
-    target_flag = any(["target" in key for key in visu_keys])
+    target_flag = any("target" in key for key in visu_keys)
     for i, data in enumerate(visu_data):
         if target_flag is False or "target" in visu_keys[i]:
             c_max = np.amax(data)
@@ -215,7 +214,7 @@ def _save_plot_from_2d_array(
         ticks = np.linspace(0, 1, 5)
         tickLabels = np.linspace(c_min, c_max, 5)
         tickLabels = [f"{t0:02.2f}" for t0 in tickLabels]
-        cbar = mpl.colorbar.ColorbarBase(
+        cbar = matplotlib.colorbar.ColorbarBase(
             ax_cbar, cmap=plt.get_cmap("inferno"), orientation="vertical", ticks=ticks
         )
         cbar.set_ticklabels(tickLabels, fontsize=5)
@@ -315,7 +314,7 @@ def _save_plot_from_3d_array(
     Args:
         filename (str): Filename.
         visu_data (Tuple[np.ndarray, ...]): Data that requires visualization.
-        visu_keys (Tuple[str, ...]]): Keys for visualizing data. such as ("u", "v").
+        visu_keys (Tuple[str, ...]): Keys for visualizing data. such as ("u", "v").
         num_timestamps (int, optional): Number of timestamps coord/value contains. Defaults to 1.
     """
 
@@ -335,7 +334,7 @@ def _save_plot_from_3d_array(
         handler_map = dict(
             zip(cmap_handles, [HandlerColormap(cm, num_stripes=8) for cm in cmaps])
         )
-        # Create custom legend with color map rectangels
+        # Create custom legend with color map rectangles
         ax.legend(
             handles=cmap_handles,
             labels=visu_keys,
@@ -431,7 +430,7 @@ def _save_plot_weather_from_array(
         ax.set_xticks(xticks)
         ax.set_xticklabels(xticklabels)
         if not log_norm:
-            map = ax.imshow(
+            map_ = ax.imshow(
                 data,
                 interpolation="nearest",
                 cmap=cmap,
@@ -441,10 +440,10 @@ def _save_plot_weather_from_array(
             )
         else:
             norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax, clip=True)
-            map = ax.imshow(
+            map_ = ax.imshow(
                 data, interpolation="nearest", cmap=cmap, aspect="auto", norm=norm
             )
-        plt.colorbar(mappable=map, cax=None, ax=None, shrink=0.5, label=colorbar_label)
+        plt.colorbar(mappable=map_, cax=None, ax=None, shrink=0.5, label=colorbar_label)
 
     fig = plt.figure(facecolor="w", figsize=(7, 7))
     ax = fig.add_subplot(2, 1, 1)

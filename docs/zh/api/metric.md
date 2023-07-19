@@ -4,6 +4,8 @@
     handler: python
     options:
       members:
+        - Metric
+        - FunctionalMetric
         - MAE
         - MSE
         - RMSE
