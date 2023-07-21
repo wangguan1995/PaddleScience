@@ -29,7 +29,7 @@ if __name__ == "__main__":
     ppsci.utils.misc.set_random_seed(42)
 
     # set output directory
-    output_dir = "./output_cylinder3d_unsteady_Re3900"
+    output_dir = "./output_0720"
 
     # set reference file name without time index
     ref_file = "data/LBM_result/cylinder3d_2023_1_31_LBM_"
@@ -80,6 +80,12 @@ if __name__ == "__main__":
             coord_keys=("t", "x", "y", "z"),
         )
     }
+
+    # geom_interior_flow = ppsci.geometry.Cuboid((0, ,60),(1600, 250))
+    # geo_stl = ppsci.geometry.Mesh("./data/darpa_suboff.stl")
+    # input_dict = geo_stl.sample_boundary(10000)
+    # inlet_index = (input_dict['x'] == 0)
+    # inlet_
 
     # set dataloader config
     batchsize_interior = 4000
@@ -235,6 +241,18 @@ if __name__ == "__main__":
         loss=ppsci.loss.MSELoss("mean", 5),
         name="IC",
     )
+
+    # integral_continuity = ppsci.constraint.IntegralConstraint(
+    #     equation["NormalDotVec"].equations,
+    #     {"normal_dot_vel": 1},
+    #     integral_line,
+    #     {**train_dataloader_cfg, "batch_size": 4, "integral_batch_size":128},
+    #     ppsci.loss.IntegralLoss("sum"),
+    #     criteria=integral_criteria,
+    #     weight_dict={"normal_dot_vel": 0.1},
+    #     name="integral_continuity",
+    # )
+
     sup = ppsci.constraint.SupervisedConstraint(
         dataloader_cfg={
             **train_dataloader_cfg,
@@ -307,7 +325,7 @@ if __name__ == "__main__":
                 "total_size": len(next(iter(lbm_0_dict.values()))),
                 "batch_size": 1024,
             },
-            loss=ppsci.loss.MSELoss("mean"),
+            loss=ppsci.loss.MSELoss("sum"),
             metric={"MSE": ppsci.metric.MSE()},
             name="Residual",
         ),
@@ -342,8 +360,7 @@ if __name__ == "__main__":
             600000,
             label,
             time_list,
-            len(time_list),
-            "result_uvwp",
+            "",
         )
     }
 
@@ -360,8 +377,12 @@ if __name__ == "__main__":
         eval_during_train=False,
         eval_freq=1000,
         equation=equation,
+        visualizer=visualizer,
         geom=None,
         validator=validator,
+        checkpoint_path="/workspace/wangguan/PaddleScience_0516/examples/cylinder/3d_unsteady_discrete/output_0524/checkpoints/epoch_400000",
     )
     # train model
-    solver.train()
+    # solver.train()
+    solver.eval()
+    solver.visualize()

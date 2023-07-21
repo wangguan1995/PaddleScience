@@ -136,6 +136,7 @@ def save_vtu_to_mesh(
         coord_keys (Tuple[str, ...]): Tuple of coord key. such as ("x", "y").
         value_keys (Tuple[str, ...]): Tuple of value key. such as ("u", "v").
     """
+    data_dict = {key: val.numpy() for key, val in data_dict.items()}
     npoint = len(next(iter(data_dict.values())))
     coord_ndim = len(coord_keys)
 
