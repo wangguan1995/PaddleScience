@@ -6,6 +6,7 @@ import time
 
 import numpy as np
 import torch
+import wandb
 
 from .nn import Algorithm
 from .utils import cross_entropy_loss
@@ -126,6 +127,12 @@ class Brain:
                     self.net(self.data.X_test), self.data.y_test
                 )
                 loss_history.append([i, loss_train.item(), loss_test.item()])
+                wandb.log(
+                    {
+                        "train loss": loss_train.item(),
+                        "ic loss": loss_test.item(),
+                    }
+                )
                 print(
                     "{:<9}Train loss: {:<25}Test loss: {:<25}".format(
                         i, loss_train.item(), loss_test.item()

@@ -3,9 +3,26 @@ import learner as ln
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import wandb
 from learner.utils import grad
 from learner.utils import mse
 
+
+def seed_torch(seed=1029):  # 随机数种子1029
+    import os
+    import random
+
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)  # 为了禁止hash随机化，使得实验可复现
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
+
+seed_torch()  # 该函数一般放在main()函数开头第一行进行固定种子最好
 
 # 准备PINN的数据集。
 class NSData(ln.Data):
@@ -17,8 +34,10 @@ class NSData(ln.Data):
     def generate(self, num):
         f = h5py.File("./data_16.h5", "r")
         # n_frame = len(f.keys())
-        tlist = ["012.6", "012.9", "013.2", "013.5"]
+        # tlist = ["012.6", "012.9", "013.2", "013.5"]
+        tlist = f.keys()
         n_frame = len(tlist)
+        print()
 
         XYT = np.zeros((0, 3))
         UX = np.zeros((0, 1))
@@ -106,8 +125,8 @@ class PINN(ln.nn.Algorithm):
 
 # 推理全场高精度512X512的解。
 def predict(net):
-    # t = np.linspace(0,30,101)
-    t = ["012.6", "012.9", "013.2", "013.5"]
+    t = np.linspace(0, 30, 101)
+    # t = ["012.6", "012.9", "013.2", "013.5"]
     nn = 512 * 512
     d = 2 * np.pi / 512
     x = np.linspace(-np.pi, np.pi - d, 512)
@@ -158,6 +177,19 @@ def main():
     print_every = 10
     batch_size = None
 
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="Taylor Green Unsteady Flow",
+        # track hyperparameters and run metadata
+        config={
+            "name": "30s 0813",
+            "dir": "/workspace/wangguan/PaddleScience_develop/examples/tayler_green",
+            "architecture": "PINN",
+            "dataset": "data_16.h5",
+            "epochs": iterations,
+        },
+    )
+
     data = NSData(train_num)
     fnn = ln.nn.FNN(size, activation)
     net = PINN(fnn)
@@ -180,6 +212,7 @@ def main():
     ln.Brain.Run()
     ln.Brain.Restore()
     ln.Brain.Output()
+    wandb.finish()
 
     predict(ln.Brain.Best_model())
 
