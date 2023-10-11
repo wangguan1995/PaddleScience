@@ -147,7 +147,7 @@ def _eval_by_dataset(solver: "solver.Solver", epoch_id: int, log_freq: int) -> f
             "validator",
             epoch_id,
             _validator.name,
-            metric_dict,
+            metric,
         )
 
         # use the first metric for return value

@@ -45,10 +45,12 @@ class Hypercube(geometry.Geometry):
         if len(xmin) != len(xmax):
             raise ValueError("Dimensions of xmin and xmax do not match.")
 
+        for i in range(len(xmin)):
+            if xmin[i] > xmax[i]:
+                raise ValueError("xmin >= xmax")
+
         self.xmin = np.array(xmin, dtype=paddle.get_default_dtype())
         self.xmax = np.array(xmax, dtype=paddle.get_default_dtype())
-        if np.any(self.xmin >= self.xmax):
-            raise ValueError("xmin >= xmax")
 
         self.side_length = self.xmax - self.xmin
         super().__init__(

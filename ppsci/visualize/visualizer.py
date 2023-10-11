@@ -154,14 +154,25 @@ class VisualizerVtu(base.Visualizer):
         batch_size: int = 64,
         num_timestamps: int = 1,
         prefix: str = "vtu",
+        mesh=None,
+        time_list=(0,),
     ):
         super().__init__(input_dict, output_expr, batch_size, num_timestamps, prefix)
         self.input_keys = coord_keys if coord_keys is not None else self.input_keys
+        self.mesh = mesh
+        self.time_list = time_list
+        self.coord_keys = [x for x in input_dict if x != "t"]
 
     def save(self, filename, data_dict):
-        vtu.save_vtu_from_dict(
-            filename, data_dict, self.input_keys, self.output_keys, self.num_timestamps
-        )
+        n = int((next(iter(data_dict.values()))).shape[0] / self.num_timestamps)
+        for i, t in enumerate(self.time_list):
+            vtu.save_vtu_to_mesh(
+                osp.join(filename, f"predict_t={t}.vtu"),
+                {key: (data_dict[key][i * n : (i + 1) * n]) for key in data_dict},
+                self.coord_keys,
+                self.output_keys,
+                mesh=self.mesh,
+            )
 
 
 class Visualizer2D(base.Visualizer):

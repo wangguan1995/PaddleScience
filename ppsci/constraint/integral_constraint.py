@@ -113,6 +113,8 @@ class IntegralConstraint(base.Constraint):
                 dataloader_cfg["integral_batch_size"], random, criteria
             )
             input["x"] = input["x"] + random_trans
+            # import ppsci
+            # ppsci.visualize.save_vtu_from_dict(f"./integral_line_{i}_.vtu", input, ("x", "y"), ("area",))
             input_list.append(input)
         input = misc.stack_dict_list(input_list)
         # shape of each input is [batch_size, integral_batch_size, ndim]

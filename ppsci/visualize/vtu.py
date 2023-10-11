@@ -125,8 +125,10 @@ def save_vtu_from_dict(
 def save_vtu_to_mesh(
     filename: str,
     data_dict: Dict[str, np.ndarray],
-    coord_keys: Tuple[str, ...],
-    value_keys: Tuple[str, ...],
+    coord_keys: Tuple[str, ...] = ("x", "y", "z"),
+    value_keys: Tuple[str, ...] = ("u", "v", "w", "p"),
+    mesh=None,
+    scale=None,
 ):
     """Save data into .vtu format by meshio.
 
@@ -136,6 +138,8 @@ def save_vtu_to_mesh(
         coord_keys (Tuple[str, ...]): Tuple of coord key. such as ("x", "y").
         value_keys (Tuple[str, ...]): Tuple of value key. such as ("u", "v").
     """
+    data_dict = {key: val for key, val in data_dict.items()}
+    data_dict = data_dict if scale is None else scale(data_dict)
     npoint = len(next(iter(data_dict.values())))
     coord_ndim = len(coord_keys)
 
@@ -143,8 +147,14 @@ def save_vtu_to_mesh(
     points = np.stack((data_dict[key] for key in coord_keys)).reshape(
         coord_ndim, npoint
     )
-    mesh = meshio.Mesh(
-        points=points.T, cells=[("vertex", np.arange(npoint).reshape(npoint, 1))]
+    mesh = (
+        mesh
+        if mesh
+        else meshio.Mesh(
+            points=points.T, cells=[("vertex", np.arange(npoint).reshape(npoint, 1))]
+        )
     )
+    mesh.cell_sets = None
     mesh.point_data = {key: data_dict[key] for key in value_keys}
+    print(filename)
     mesh.write(filename)

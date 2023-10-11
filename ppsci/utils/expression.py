@@ -78,7 +78,10 @@ class ExpressionSolver(nn.Layer):
                 output_dict = model(input_dicts[i])
 
             # equation forward
+            # keys = list(constraint.keys())
+            # print(keys[i])
             for name, expr in expr_dict.items():
+                # print("input keys : ", input_dicts[i].keys())
                 if callable(expr):
                     output_dict[name] = expr({**output_dict, **input_dicts[i]})
                 else:
@@ -96,6 +99,7 @@ class ExpressionSolver(nn.Layer):
         # compute loss for each constraint according to its' own output, label and weight
         constraint_losses = []
         for i, _constraint in enumerate(constraint.values()):
+            # print("constraint loss : ", _constraint.name)
             constraint_loss = _constraint.loss(
                 output_dicts[i],
                 label_dicts[i],

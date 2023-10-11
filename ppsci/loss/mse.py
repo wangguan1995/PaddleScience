@@ -62,6 +62,7 @@ class MSELoss(base.Loss):
         losses = 0.0
         for key in label_dict:
             loss = F.mse_loss(output_dict[key], label_dict[key], "none")
+            # print(loss.mean().item())
             if weight_dict:
                 loss *= weight_dict[key]
 

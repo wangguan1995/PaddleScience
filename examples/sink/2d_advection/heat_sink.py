@@ -61,7 +61,7 @@ class Momentum_imbalance_metric(ppsci.metric.base.Metric):
         metric_dict = {}
         metric_dict["momentum imbalance"] = output_dict["area"].T.matmul(
             (
-                +paddle.abs(output_dict["momentum_x"])
+                paddle.abs(output_dict["momentum_x"])
                 + paddle.abs(output_dict["momentum_y"])
             )
         )
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # initialization
     args = config.parse_args()
     ppsci.utils.misc.set_random_seed(42)
-    OUTPUT_DIR = "./output" if not args.output_dir else args.output_dir
+    OUTPUT_DIR = "./output_0918" if not args.output_dir else args.output_dir
     logger.init_logger("ppsci", f"{OUTPUT_DIR}/train.log", "info")
 
     # params for domain
@@ -406,7 +406,7 @@ if __name__ == "__main__":
         MSELoss("fake loss"),
         equation["NavierStokes"].equations,
         {
-            "global_monitor": Mass_imbalance_metric(),
+            "mass_imbalance": Mass_imbalance_metric(),
             "momentum_imbalance": Momentum_imbalance_metric(),
         },
         "eq_validator",
@@ -448,7 +448,7 @@ if __name__ == "__main__":
             },
             coord_keys=("x", "y"),
             batch_size=128,
-            prefix="result_u_v_p_c",
+            prefix="predict",
         )
     }
 
@@ -468,7 +468,9 @@ if __name__ == "__main__":
         equation=equation,
         validator=validator,
         visualizer=visualizer,
+        # checkpoint_path="./output_0714_mydata/checkpoints/epoch_500"
     )
 
     solver.train()
     solver.visualize()
+    # solver.eval(epoch_id=500)

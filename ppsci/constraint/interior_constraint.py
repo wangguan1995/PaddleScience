@@ -106,6 +106,9 @@ class InteriorConstraint(base.Constraint):
             criteria,
             evenly,
         )
+        # import ppsci
+        # ppsci.visualize.save_vtu_from_dict("./interior.vtu", input, ("x", "y"), ("area", "sdf", "sdf__x", "sdf__y"))
+        # exit(-1)
         if "area" in input:
             input["area"] *= dataloader_cfg["iters_per_epoch"]
 

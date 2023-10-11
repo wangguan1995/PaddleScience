@@ -42,7 +42,9 @@ class Mesh(geometry.Geometry):
         >>> geom = ppsci.geometry.Mesh("/path/to/mesh.stl")  # doctest: +SKIP
     """
 
-    def __init__(self, mesh: Union["pymesh.Mesh", str]):
+    def __init__(
+        self, mesh: Union["pymesh.Mesh", str], extrusion_mesh=None, geo_total_area=None
+    ):
         # check if pymesh is installed when using Mesh Class
         if not checker.dynamic_import_to_globals(["pymesh"]):
             raise ImportError(
@@ -57,7 +59,8 @@ class Mesh(geometry.Geometry):
             self.py_mesh = mesh
         else:
             raise ValueError("arg `mesh` should be path string or or `pymesh.Mesh`")
-
+        self.extrusion_mesh = extrusion_mesh
+        self.geo_total_area = geo_total_area
         self.init_mesh()
 
     def init_mesh(self):
@@ -130,7 +133,10 @@ class Mesh(geometry.Geometry):
             )
         import pymesh
 
-        sdf, _, _, _ = pymesh.signed_distance_to_mesh(self.py_mesh, points)
+        mesh = (
+            self.py_mesh if self.extrusion_mesh is None else self.extrusion_mesh.py_mesh
+        )
+        sdf, _, _, _ = pymesh.signed_distance_to_mesh(mesh, points)
         sdf = sdf[..., np.newaxis]
         return sdf
 
@@ -421,8 +427,12 @@ class Mesh(geometry.Geometry):
             _nsample += n
 
         all_points = np.concatenate(all_points, axis=0)
-        cuboid_volume = np.prod([b[1] - b[0] for b in self.bounds])
-        all_areas = np.full((n, 1), cuboid_volume * (_nvalid / _nsample) / n)
+
+        if self.extrusion_mesh is not None:
+            all_areas = np.full((n, 1), n / self.geo_total_area)
+        else:
+            cuboid_volume = np.prod([b[1] - b[0] for b in self.bounds])
+            all_areas = np.full((n, 1), cuboid_volume * (_nvalid / _nsample) / n)
         return all_points, all_areas
 
     def sample_interior(self, n, random="pseudo", criteria=None, evenly=False):
@@ -440,8 +450,11 @@ class Mesh(geometry.Geometry):
         # NOTE: add negtive to the sdf values because weight should be positive.
         sdf = -self.sdf_func(points)
         sdf_dict = misc.convert_to_dict(sdf, ["sdf"])
-
-        return {**x_dict, **area_dict, **sdf_dict}
+        if self.compute_sdf_grad is True:
+            sdf_grad_dict = self.sdf_gradient(points)
+        else:
+            sdf_grad_dict = {}
+        return {**x_dict, **area_dict, **sdf_dict, **sdf_grad_dict}
 
     def union(self, other: "Mesh"):
         if not checker.dynamic_import_to_globals(["pymesh"]):

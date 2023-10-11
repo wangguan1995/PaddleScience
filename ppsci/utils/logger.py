@@ -223,27 +223,39 @@ def save_to_csv(
         csv_dir_name (str): str type, prefix of the csv file name.
         epoch_id (int): int type, the current epoch id.
         filename (str): str type, the name of the data to be written.
-        data (dict):  type, the data to be written, with string keys and numeric values.
+        data (dict[dict]):  type, the data to be written, with string keys and numeric values.
 
     Returns:
         None.
     """
     validator_dir = os.path.join(output_dir, csv_dir_name)
+    csv_file_name = os.path.join(validator_dir, f"{filename}.csv")
+    file_is_exist = os.path.exists(csv_file_name)
     os.makedirs(validator_dir, exist_ok=True)
-    if epoch_id == eval_freq:
+    print(file_is_exist)
+    print((epoch_id == eval_freq) | (not file_is_exist))
+    if (epoch_id == eval_freq) | (not file_is_exist):
         with open(
-            os.path.join(validator_dir, f"{filename}.csv"),
+            csv_file_name,
             "w",
             encoding="utf-8",
             newline="",
         ) as file:
             writer = csv.writer(file)
-            writer.writerow(["epoch id"] + [key for key in data.keys()])
+            head_line = ["epoch_id"]
+            for key_dict, val_dict in data.items():
+                for key, _ in val_dict.items():
+                    head_line.append(f"{key_dict}.{key}")
+            writer.writerow(head_line)
     with open(
-        os.path.join(validator_dir, f"{filename}.csv"),
+        csv_file_name,
         "a",
         encoding="utf-8",
         newline="",
     ) as file:
         writer = csv.writer(file)
-        writer.writerow([epoch_id] + [val.item() for val in data.values()])
+        data_line = [epoch_id]
+        for key_dict, val_dict in data.items():
+            for key, _ in val_dict.items():
+                data_line.append(float(val_dict[key]))
+        writer.writerow(data_line)

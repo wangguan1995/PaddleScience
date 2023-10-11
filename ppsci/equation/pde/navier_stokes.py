@@ -93,7 +93,7 @@ class NavierStokes(base.PDE):
             x, y = out["x"], out["y"]
             u, v, p = out["u"], out["v"], out["p"]
             momentum_x = (
-                +u * jacobian(u, x)
+                u * jacobian(u, x)
                 + v * jacobian(u, y)
                 - nu * hessian(u, x)
                 - nu * hessian(u, y)
@@ -116,7 +116,7 @@ class NavierStokes(base.PDE):
             x, y = out["x"], out["y"]
             u, v, p = out["u"], out["v"], out["p"]
             momentum_y = (
-                +u * jacobian(v, x)
+                u * jacobian(v, x)
                 + v * jacobian(v, y)
                 - nu * hessian(v, x)
                 - nu * hessian(v, y)
@@ -156,7 +156,7 @@ class NavierStokes(base.PDE):
                 sympy_expr -= (nu * u.diff(z)).diff(z)
 
             sympy_expr += (
-                +u * (u.diff(x))
+                u * (u.diff(x))
                 + v * (u.diff(y))
                 + 1 / rho * p.diff(x)
                 - (nu * u.diff(x)).diff(x)
@@ -189,7 +189,7 @@ class NavierStokes(base.PDE):
                 sympy_expr -= (nu * v.diff(z)).diff(z)
 
             sympy_expr += (
-                +u * v.diff(x)
+                u * v.diff(x)
                 + v * v.diff(y)
                 + 1 / rho * p.diff(y)
                 - (nu * v.diff(x)).diff(x)

@@ -39,6 +39,9 @@ class Geometry:
     def __init__(self, ndim: int, bbox: Tuple[np.ndarray, np.ndarray], diam: float):
         self.ndim = ndim
         self.bbox = bbox
+        self.compute_area = False
+        self.compute_sdf = False
+        self.compute_sdf_grad = False
         self.diam = min(diam, np.linalg.norm(bbox[1] - bbox[0]))
 
     @property
@@ -64,9 +67,16 @@ class Geometry:
         )
         return self.random_points(n)
 
-    def sdf_func(self, points: np.ndarray) -> np.ndarray:
-        """Compute sdf."""
-        raise NotImplementedError("Geometry.sdf_func is not implemented")
+    def compute_properties(
+        self,
+        compute_area: bool = False,
+        compute_sdf: bool = False,
+        compute_sdf_grad: bool = False,
+    ):
+        """Decide to compute the compute_properties of points in the geometry or not."""
+        self.compute_area = compute_area
+        self.compute_sdf = compute_sdf
+        self.compute_sdf_grad = compute_sdf_grad
 
     def sdf_gradient(self, points, delta=(0.0001,)) -> Dict[str, np.ndarray]:
         """Compute gradient of sdf."""
@@ -114,9 +124,11 @@ class Geometry:
 
         # if sdf_fun/sdf_grad/area added,
         # return x_dict and sdf_grad_dict/area_dict, else, only return the x_dict
-        sdf = -self.sdf_func(x)
-        sdf_dict = misc.convert_to_dict(sdf, ("sdf",))
-        sdf_grad_dict = self.sdf_gradient(x)
+        if hasattr(self, "sdf_func"):
+            print("calculate sdf grad")
+            sdf = -self.sdf_func(x)
+            sdf_dict = misc.convert_to_dict(sdf, ("sdf",))
+            sdf_grad_dict = self.sdf_gradient(x)
 
         if hasattr(self, "area"):
             if self.ndim == 1:
