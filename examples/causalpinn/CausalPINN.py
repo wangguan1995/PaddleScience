@@ -2,6 +2,7 @@ import numpy as np
 import paddle
 import paddle.nn as nn
 from paddle.io import Dataset
+import pickle
 
 class DataGenerator(Dataset):
     def __init__(self, t0, t1, n_t=10, n_x=64):
@@ -44,10 +45,62 @@ class modified_MLP_II(paddle.nn.Layer):
         self.k_yy = k_yy.flatten()[:,None]
         self.M_t = M_t
         self.U1 = paddle.nn.Linear(in_features=layers[0], out_features=layers[1])
+        print(self.U1.weight.shape)
+        print(self.U1.bias.shape)
+
+        with open('U1_0.pkl', 'rb') as f:
+            U1 = pickle.load(f)
+            U1 = paddle.to_tensor(np.array(U1))
+        with open('b1_0.pkl', 'rb') as f:
+            b1 = pickle.load(f)
+            b1 = paddle.to_tensor(np.array(b1))
+            
+        print(U1.shape)
+        print(b1.shape)
+        
+        self.U1.weight.set_value(U1)
+        self.U1.bias.set_value(b1)
+        
+
+        
         self.U2 = paddle.nn.Linear(in_features=layers[0], out_features=layers[1])
+        print(self.U2.weight.shape)
+        print(self.U2.bias.shape)
+
+        with open('U2_0.pkl', 'rb') as f:
+            U2 = pickle.load(f)
+            U2 = paddle.to_tensor(np.array(U2))
+        with open('b2_0.pkl', 'rb') as f:
+            b2 = pickle.load(f)
+            b2 = paddle.to_tensor(np.array(b2))
+        
+        print(U2.shape)
+        print(b2.shape)
+
+        self.U2.weight.set_value(U2)
+        self.U2.bias.set_value(b2)
+
         self.Ws = [paddle.nn.Linear(in_features=layers[i], out_features=layers[i + 1]) for i in
                    range(0, len(layers) - 2)]
         self.F = paddle.nn.Linear(in_features=layers[-2], out_features=layers[-1])
+        
+        with open('params_0.pkl', 'rb') as f:
+            params = pickle.load(f)
+
+        i = 0 
+        for W, b in params[:-1]:
+            W = paddle.to_tensor(np.array(W))
+            b = paddle.to_tensor(np.array(b))
+            self.Ws[i].weight.set_value(W)
+            self.Ws[i].bias.set_value(b)
+            i = i+1
+            
+        W, b = params[-1]
+        W = paddle.to_tensor(np.array(W))
+        b = paddle.to_tensor(np.array(b))
+        self.F.weight.set_value(W)
+        self.F.bias.set_value(b)
+            
         self.activation = activation
         self.k_t = paddle.pow(paddle.to_tensor(10), paddle.arange(0, self.M_t + 1)).astype('float32')
 
@@ -185,15 +238,15 @@ class PINN((paddle.nn.Layer)):
     def train(self, dataset, nIter=10000):
         res_data = iter(dataset)
         # Main training loop
-        for it in range(nIter):
+        for it in range(10):
             batch = next(res_data)
             loss = self.loss(batch)
             loss.backward()
             self.optimizer.step()
             self.optimizer.clear_grad()
 
-            if it % 1000 == 0:
-                print("ite:{},loss:{:.3e}".format(it,loss.item()))
+            if it % 1 == 0:
+                print("iter:{},loss:{:.3e}".format(it,loss.item()))
                 # l2_error_value = self.compute_l2_error()
 
                 _, _, W_value = self.residuals_and_weights(self.tol, batch)
@@ -205,7 +258,7 @@ class PINN((paddle.nn.Layer)):
 
 np.random.seed(1234)
 
-data = np.load('/home/aistudio/data/data262374/NS.npy', allow_pickle=True).item()
+data = np.load('./NS.npy', allow_pickle=True).item()
 # Test data
 sol = paddle.to_tensor(data['sol'])
 
