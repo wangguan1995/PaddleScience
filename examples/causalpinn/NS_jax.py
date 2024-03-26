@@ -1,4 +1,3 @@
-import jax
 import numpy as onp
 import jax.numpy as np
 from jax import random, grad, vmap, jit, jacfwd, jacrev
@@ -10,6 +9,7 @@ import itertools
 from functools import partial
 from torch.utils import data
 from tqdm import trange
+import jax
 
 
 # Define the neural net
@@ -95,7 +95,7 @@ def modified_MLP_II(layers, L_x=1.0, L_y=1.0, M_t=1, M_x=1, M_y=1, activation=re
             inputs = np.multiply(outputs, U) + np.multiply(1 - outputs, V)
         W, b = params[-1]
         outputs = np.dot(inputs, W) + b
-        return inputs, y
+        return outputs
 
     return init, apply
 
@@ -194,7 +194,6 @@ class PINN:
     def __init__(self, key, w_exact, layers, M_t, M_x, M_y, state0, t0, t1, n_t, x_star, y_star, tol):
 
         self.w_exact = w_exact
-
         self.M_t = M_t
         self.M_x = M_x
         self.M_y = M_y
@@ -290,23 +289,24 @@ class PINN:
 
         return res_w, res_c
 
-    # @partial(jit, static_argnums=(0,))
+    #@partial(jit, static_argnums=(0,))
     def residuals_and_weights(self, params, tol, batch):
         t_r, x_r = batch
         loss_u0, loss_v0, loss_w0 = self.loss_ics(params)
         L_0 = 1e5 * (loss_u0 + loss_v0 + loss_w0)
+        # print(t_r.shape, x_r[:, 0].shape, x_r[:, 1].shape)
+        # jax.debug.print("t_r = {}, x_r = {}, y_r = {}", t_r.mean(), x_r[:, 0].mean(), x_r[:, 1].mean())
         res_w_pred, res_c_pred = self.r_pred_fn(params, t_r, x_r[:, 0], x_r[:, 1])
+        # jax.debug.print("res_w_pred = {}, res_c_pred = {}", res_w_pred.mean(), res_c_pred.mean())
+        
         L_t = np.mean(res_w_pred ** 2 + 100 * res_c_pred ** 2, axis=1)
         W = lax.stop_gradient(np.exp(- tol * (self.M @ L_t + L_0)))
         return L_0, L_t, W
 
-    # @partial(jit, static_argnums=(0,))
+    #@partial(jit, static_argnums=(0,))
     def loss_ics(self, params):
         # Compute forward pass
         u0_pred = self.u0_pred_fn(params, 0.0, self.x_star, self.y_star)
-        jax.debug.print("\ninputs.flatten() =  {}", u0_pred.flatten())
-        jax.debug.print("\ninputs.shape =  {}", u0_pred.shape)
-        exit()
         v0_pred = self.v0_pred_fn(params, 0.0, self.x_star, self.y_star)
         w0_pred = self.w0_pred_fn(params, 0.0, self.x_star, self.y_star)
         # Compute loss
@@ -315,7 +315,7 @@ class PINN:
         loss_w0 = np.mean((w0_pred - self.state0[2, :, :]) ** 2)
         return loss_u0, loss_v0, loss_w0
 
-    # @partial(jit, static_argnums=(0,))
+    #@partial(jit, static_argnums=(0,))
     def loss_res(self, params, batch):
         t_r, x_r = batch
         # Compute forward pass
@@ -325,21 +325,27 @@ class PINN:
         loss_res_c = np.mean(res_c_pred ** 2)
         return loss_res_w, loss_res_c
 
-    # @partial(jit, static_argnums=(0,))
+    #@partial(jit, static_argnums=(0,))
     def loss(self, params, batch):
 
         L_0, L_t, W = self.residuals_and_weights(params, self.tol, batch)
         # Compute loss
         loss = np.mean(W * L_t + L_0)
+        jax.debug.print("\nW = {}", W.mean())
+        jax.debug.print("L_t = {}", L_t.mean())
+        jax.debug.print("L_0 = {}", L_0.mean())
+        jax.debug.print("loss = {}", loss)
+        exit()
         return loss
 
-    # @partial(jit, static_argnums=(0,))
+    #@partial(jit, static_argnums=(0,))
     def compute_l2_error(self, params):
         w_pred = self.w_pred_fn(params, t_star[:num_step], x_star, y_star)
         l2_error = np.linalg.norm(w_pred - self.w_exact) / np.linalg.norm(self.w_exact)
         return l2_error
 
-   # @partial(jit, static_argnums=(0,))
+    # Define a compiled update step
+    #@partial(jit, static_argnums=(0,))
     def step(self, i, opt_state, batch):
         params = self.get_params(opt_state)
         g = grad(self.loss)(params, batch)
@@ -348,19 +354,19 @@ class PINN:
     # Optimize parameters in a loop
     def train(self, dataset, nIter=10000):
         res_data = iter(dataset)
-        pbar = trange(nIter)
+        pbar = trange(10)
         # Main training loop
         for it in pbar:
             batch = next(res_data)
             self.current_count = next(self.itercount)
             self.opt_state = self.step(self.current_count, self.opt_state, batch)
 
-            if it % 1000 == 0:
+            if it % 1 == 0:
                 params = self.get_params(self.opt_state)
 
                 l2_error_value = self.compute_l2_error(params)
 
-                loss_value = self.loss(params, batch)
+                loss_value = self.loss_value
 
                 loss_u0_value, loss_v0_value, loss_w0_value = self.loss_ics(params)
                 loss_res_w_value, loss_res_c_value = self.loss_res(params, batch)
@@ -373,7 +379,6 @@ class PINN:
                 self.loss_w0_log.append(loss_w0_value)
                 self.loss_res_w_log.append(loss_res_w_value)
                 self.loss_res_c_log.append(loss_res_c_value)
-
                 pbar.set_postfix({'l2 error': l2_error_value,
                                   'Loss': loss_value,
                                   'loss_u0': loss_u0_value,
@@ -442,6 +447,7 @@ for k in range(N):
         print('tol:', model.tol)
         # Train
         model.train(dataset, nIter=100000)
+        exit()
 
     # Store
     params = model.get_params(model.opt_state)
@@ -471,4 +477,3 @@ for k in range(N):
     v0_pred = model.v0_pred_fn(params, t1, x_star, y_star)
     w0_pred = model.w0_pred_fn(params, t1, x_star, y_star)
     state0 = np.stack([u0_pred, v0_pred, w0_pred])
-

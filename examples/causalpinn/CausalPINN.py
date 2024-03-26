@@ -5,6 +5,8 @@ from paddle.io import Dataset
 import pickle
 from jax import random
 import jax
+paddle.framework.core.set_prim_eager_enabled(True)
+
 class DataGenerator(Dataset):
     def __init__(self, t0, t1, n_t=10, n_x=64):
         'Initialization'
@@ -22,25 +24,24 @@ class DataGenerator(Dataset):
 
     def __data_generation(self):
         'Generates data containing batch_size samples'
-        
         subkeys = random.split(self.subkey, 2)
-        t_r = jax.random.uniform(subkeys[0], shape=(self.n_t,), minval=self.t0, maxval=self.t1).sort()
-        x_r = random.uniform(subkeys[1], shape=(self.n_x, 2), minval=0.0, maxval=2.0 * jax.numpy.pi)
-        y_r = x_r[:,0]
-        x_r = x_r[:,1]
+        t_r = random.uniform(subkeys[0], shape=(self.n_t,), minval=self.t0, maxval=self.t1).sort()
+        x_r = random.uniform(subkeys[1], shape=(self.n_x, 2), minval=0.0, maxval=2.0 * np.pi)
+        t_r = paddle.to_tensor(np.asarray(t_r), stop_gradient=False).reshape([-1,1])
+        x_r = paddle.to_tensor(np.asarray(x_r), stop_gradient=False)
+        
+        y_r = x_r[:, 1].reshape([-1,1])
+        x_r = x_r[:, 0].reshape([-1,1])
+        t_r = t_r.reshape([-1,1])
+                                                  
+        x_r = paddle.tile(x_r, (1, n_t)).reshape((-1,1))  # N x T
+        y_r = paddle.tile(y_r, (1, n_t)).reshape((-1,1)) # N x T
+        t_r = paddle.tile(t_r, (1, n_x)).T.reshape((-1,1))  # N x T
+        
+        x_r.stop_gradient = False
+        y_r.stop_gradient = False
+        t_r.stop_gradient = False
 
-        t_r = paddle.to_tensor(np.array(t_r))
-        x_r = paddle.to_tensor(np.array(x_r))
-        y_r = paddle.to_tensor(np.array(y_r))
-        # t_r = paddle.uniform(shape=(self.n_t,), min=self.t0, max=self.t1).sort()
-        # points = paddle.uniform(shape=(self.n_x, 2), min=0.0, max=2.0 * np.pi)
-        # x_r = paddle.tile(points[:, 0:1], (1, n_t)).reshape((-1,1))  # N x T
-        # y_r = paddle.tile(points[:, 1:2], (1, n_t)).reshape((-1,1)) # N x T
-        # t_r = (paddle.tile(t_r, (1, n_x)).T).reshape((-1,1))  # N x T
-
-        # t_r.stop_gradient=False
-        # x_r.stop_gradient=False
-        # y_r.stop_gradient=False
         batch = (t_r, x_r, y_r)
         return batch
 
@@ -49,13 +50,14 @@ class modified_MLP_II(paddle.nn.Layer):
         super(modified_MLP_II, self).__init__()
         self.w_x = paddle.to_tensor(2.0 * np.pi / L_x,dtype='float32')
         self.w_y = paddle.to_tensor(2.0 * np.pi / L_y,dtype='float32')
-        self.k_x = paddle.arange(1, M_x + 1).astype('float32')
-        self.k_y = paddle.arange(1, M_y + 1).astype('float32')
-        k_xx, k_yy = paddle.meshgrid(self.k_x, self.k_y)
-        self.k_x =self.k_x[:,None]
-        self.k_y =self.k_y[:,None]
-        self.k_xx = k_xx.flatten()[:,None]
-        self.k_yy = k_yy.flatten()[:,None]
+        self.k_x = np.arange(1, M_x + 1)
+        self.k_y = np.arange(1, M_y + 1)
+        self.k_xx, self.k_yy = np.meshgrid(self.k_x, self.k_y)
+        
+        self.k_x = paddle.to_tensor(self.k_x, dtype='float32').reshape([-1,1])
+        self.k_y = paddle.to_tensor(self.k_y, dtype='float32').reshape([-1,1])
+        self.k_xx = paddle.to_tensor(self.k_xx.flatten(), dtype='float32').reshape([-1,1])
+        self.k_yy = paddle.to_tensor(self.k_yy.flatten(), dtype='float32').reshape([-1,1])
         self.M_t = M_t
         self.U1 = paddle.nn.Linear(in_features=layers[0], out_features=layers[1])
 
@@ -112,19 +114,19 @@ class modified_MLP_II(paddle.nn.Layer):
 
     def forward(self, inputs):
         t = inputs[:,2:3]
-        print("MLP input t = ", t.shape, t.mean())
         x = inputs[:,0:1]
         y = inputs[:,1:2]
         k_t = paddle.pow(paddle.to_tensor(10), paddle.arange(0, self.M_t + 1)).astype('float32')[:,None]
-        inputs=paddle.concat([paddle.ones_like((t),dtype='float32'), t @ k_t.T,                                                      
-                                    paddle.cos(x@self.k_x.T * self.w_x), paddle.cos(y@self.k_y.T * self.w_y),               
-                                    paddle.sin(x@self.k_x.T * self.w_x), paddle.sin(y@self.k_y.T * self.w_y),               
-                                    paddle.cos(x@self.k_xx.T * self.w_x) * paddle.cos(y@self.k_yy.T * self.w_y),            
-                                    paddle.cos(x@self.k_xx.T * self.w_x) * paddle.sin(y@self.k_yy.T * self.w_y),            
-                                    paddle.sin(x@self.k_xx.T * self.w_x) * paddle.cos(y@self.k_yy.T * self.w_y),            
-                                    paddle.sin(x@self.k_xx.T * self.w_x) * paddle.sin(y@self.k_yy.T * self.w_y)], axis=1)
-        print("\ninputs.flatten() = ", inputs.flatten())
-        exit()
+        inputs=paddle.concat([
+            paddle.ones_like((t),dtype='float32'), 
+            t @ k_t.T,                                                      
+            paddle.cos(x@self.k_x.T * self.w_x), paddle.cos(y@self.k_y.T * self.w_y),               
+            paddle.sin(x@self.k_x.T * self.w_x), paddle.sin(y@self.k_y.T * self.w_y),               
+            paddle.cos(x@self.k_xx.T * self.w_x) * paddle.cos(y@self.k_yy.T * self.w_y),            
+            paddle.cos(x@self.k_xx.T * self.w_x) * paddle.sin(y@self.k_yy.T * self.w_y),            
+            paddle.sin(x@self.k_xx.T * self.w_x) * paddle.cos(y@self.k_yy.T * self.w_y),            
+            paddle.sin(x@self.k_xx.T * self.w_x) * paddle.sin(y@self.k_yy.T * self.w_y)
+            ], axis=1)
         U = self.activation(self.U1(inputs))
         V = self.activation(self.U2(inputs))
         for W in self.Ws:
@@ -193,8 +195,8 @@ class PINN((paddle.nn.Layer)):
         w_x = paddle.grad(w, x, create_graph=True)[0]
         w_y = paddle.grad(w, y, create_graph=True)[0]
 
-        w_xx = paddle.grad(w_x, x, create_graph=False)[0]
-        w_yy = paddle.grad(w_y, y, create_graph=False)[0]
+        w_xx = paddle.grad(w_x, x, create_graph=True)[0]
+        w_yy = paddle.grad(w_y, y, create_graph=True)[0]
 
         res_w = w_t + u * w_x + v * w_y - nu * (w_xx + w_yy)
         res_c = u_x + v_y
@@ -216,13 +218,9 @@ class PINN((paddle.nn.Layer)):
         u_v = self.network(paddle.concat([self.x_star, self.y_star, paddle.zeros_like(self.x_star,dtype='float32')], 1))
         u0_pred = u_v[:, 0:1]
         v0_pred = u_v[:, 1:2]
-        print(u0_pred.cpu().numpy())
-        exit()
-        v_x = paddle.grad(v0_pred, self.x_star, create_graph=False)[0]
-        u_y = paddle.grad(u0_pred, self.y_star, create_graph=False)[0]
+        v_x = paddle.grad(v0_pred, self.x_star, create_graph=True)[0]
+        u_y = paddle.grad(u0_pred, self.y_star, create_graph=True)[0]
         w0_pred = v_x - u_y
-        print(u0_pred.cpu().numpy())
-        exit()
         
         # Compute loss
         loss_u0 = paddle.mean((u0_pred.flatten() - self.state0[0, :, :].flatten()) ** 2)
@@ -234,6 +232,11 @@ class PINN((paddle.nn.Layer)):
         L_0, L_t, W = self.residuals_and_weights(self.tol, batch)
         # Compute loss
         loss = paddle.mean(W * (L_t.reshape((-1,32)).T) + L_0)
+        print(f"\nW = {W.mean()}")
+        print(f"\nL_t = {L_t.mean()}")
+        print(f"\nL_0 = {L_0.mean()}")
+        print(f"\loss = {loss.mean()}")
+        exit()
         return loss
 
     def compute_l2_error(self):
@@ -241,8 +244,8 @@ class PINN((paddle.nn.Layer)):
         u = u_v[:, 0:1]
         v = u_v[:, 1:2]
 
-        u_y = paddle.grad(u, y_star, create_graph=False)[0]
-        v_x = paddle.grad(v, x_star, create_graph=False)[0]
+        u_y = paddle.grad(u, y_star, create_graph=True)[0]
+        v_x = paddle.grad(v, x_star, create_graph=True)[0]
         w_pred = v_x - u_y
         l2_error = np.linalg.norm(w_pred - self.w_exact) / np.linalg.norm(self.w_exact)
         return l2_error
@@ -254,12 +257,12 @@ class PINN((paddle.nn.Layer)):
         for it in range(10):
             batch = next(res_data)
             loss = self.loss(batch)
-            loss.backward()
+            loss.backward(retain_graph=True)
             self.optimizer.step()
             self.optimizer.clear_grad()
 
             if it % 1 == 0:
-                print("iter:{},loss:{:.3e}".format(it,loss.item()))
+                print("iter:{},loss:{:.8e}".format(it,loss.item()))
                 # l2_error_value = self.compute_l2_error()
 
                 _, _, W_value = self.residuals_and_weights(self.tol, batch)
@@ -304,7 +307,7 @@ M_y = 5
 d0 = 2 * M_x + 2 * M_y + 4 * M_x * M_y + M_t + 2
 layers = [d0, 128, 128, 128, 128, 2]
 
-num_step = 1
+num_step = 10
 t0 = 0.0
 t1 = float(data['t'][num_step])
 n_t = 32
@@ -315,7 +318,7 @@ tol_list = [1e-3, 1e-2, 1e-1, 1e0]
 n_x = 256
 dataset = DataGenerator(t0, t1, n_t, n_x)
 
-N = 1 #20
+N = 20
 w_pred_list = []
 params_list = []
 losses_list = []
@@ -333,6 +336,7 @@ for k in range(N):
         print('tol:', model.tol)
         # Train
         model.train(dataset, nIter=100000)
+        exit()
     
 obj = {'model': model.state_dict()}
 path = '/home/aistudio/model.pdparams'
