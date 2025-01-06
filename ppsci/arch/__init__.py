@@ -17,6 +17,12 @@ from __future__ import annotations
 import copy
 
 from ppsci.arch.regdgcnn import RegDGCNN
+from ppsci.arch.regpointnet import RegPointNet
+from ppsci.arch.transolver import Transolver_Airfoil
+from ppsci.arch.transolver import Transolver_Irregular_Mesh_Elas
+from ppsci.arch.transolver import Transolver_ShapeNetCar
+from ppsci.arch.transolver import Transolver_Structured_Mesh_2D
+from ppsci.arch.transolver import Transolver_Structured_Mesh_3D
 
 from ppsci.arch.afno import AFNONet  # isort:skip
 from ppsci.arch.afno import PrecipNet  # isort:skip
@@ -105,7 +111,13 @@ __all__ = [
     "USCNN",
     "VelocityDiscriminator",
     "VelocityGenerator",
+    "Transolver_ShapeNetCar",
+    "Transolver_Structured_Mesh_3D",
+    "Transolver_Structured_Mesh_2D",
+    "Transolver_Irregular_Mesh_Elas",
+    "Transolver_Airfoil",
     "RegDGCNN",
+    "RegPointNet",
 ]
 
 

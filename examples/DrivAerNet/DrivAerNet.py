@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
 from os import path as osp
 
 import hydra
@@ -97,15 +98,21 @@ def train(cfg: DictConfig):
     validator = {drivaernet_valid.name: drivaernet_valid}
 
     # set optimizer
-    lr_scheduler = paddle.optimizer.lr.ReduceOnPlateau(mode=cfg.TRAIN.scheduler.mode,
-                                                       patience=cfg.TRAIN.scheduler.patience,
-                                                       factor=cfg.TRAIN.scheduler.factor,
-                                                       verbose=cfg.TRAIN.scheduler.verbose,
-                                                       learning_rate=cfg.ARGS.lr)
+    lr_scheduler = paddle.optimizer.lr.ReduceOnPlateau(
+        mode=cfg.TRAIN.scheduler.mode,
+        patience=cfg.TRAIN.scheduler.patience,
+        factor=cfg.TRAIN.scheduler.factor,
+        verbose=cfg.TRAIN.scheduler.verbose,
+        learning_rate=cfg.ARGS.lr,
+    )()
 
-    optimizer = ppsci.optimizer.Adam(lr_scheduler, weight_decay=cfg.ARGS.weight_decay)(
-        model) if cfg.ARGS.optimizer == 'adam' else ppsci.optimizer.SGD(
-        lr_scheduler, weight_decay=cfg.ARGS.weight_decay)(model)
+    optimizer = (
+        ppsci.optimizer.Adam(lr_scheduler, weight_decay=cfg.ARGS.weight_decay)(model)
+        if cfg.ARGS.optimizer == "adam"
+        else ppsci.optimizer.SGD(lr_scheduler, weight_decay=cfg.ARGS.weight_decay)(
+            model
+        )
+    )
 
     # initialize solver
     solver = ppsci.solver.Solver(
@@ -151,21 +158,26 @@ def evaluate(cfg: DictConfig):
             "subset_dir": cfg.ARGS.subset_dir,
             "ids_file": cfg.EVAL.ids_file,
             "csv_file": cfg.ARGS.aero_coeff,
-            "num_points": cfg.TRAIN.num_points,
+            "num_points": cfg.EVAL.num_points,
         },
-        "batch_size": cfg.TRAIN.batch_size,
+        "batch_size": cfg.EVAL.batch_size,
         "sampler": {
             "name": "BatchSampler",
             "drop_last": False,
             "shuffle": False,
         },
-        "num_workers": cfg.TRAIN.num_workers,
+        "num_workers": cfg.EVAL.num_workers,
     }
 
     drivaernet_valid = ppsci.validate.SupervisedValidator(
         valid_dataloader_cfg,
         loss=ppsci.loss.MSELoss("mean"),
-        metric={"MSE": ppsci.metric.MSE()},
+        metric={
+            "MSE": ppsci.metric.MSE(),
+            "MAE": ppsci.metric.MAE(),
+            "Max AE": ppsci.metric.MaxAE(),
+            "R²": ppsci.metric.R2Score(),
+        },
         name="DrivAerNet_valid",
     )
 
@@ -173,7 +185,6 @@ def evaluate(cfg: DictConfig):
 
     solver = ppsci.solver.Solver(
         model=model,
-        output_dir=cfg.output_dir,
         validator=validator,
         pretrained_model_path=cfg.EVAL.pretrained_model_path,
         eval_with_no_grad=cfg.EVAL.eval_with_no_grad,
@@ -185,6 +196,7 @@ def evaluate(cfg: DictConfig):
 
 @hydra.main(version_base=None, config_path="./conf", config_name="DriveAerNet.yaml")
 def main(cfg: DictConfig):
+    warnings.filterwarnings("ignore")
     if cfg.mode == "train":
         train(cfg)
     elif cfg.mode == "eval":

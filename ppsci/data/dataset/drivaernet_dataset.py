@@ -128,6 +128,7 @@ class DrivAerNetDataset(paddle.io.Dataset):
         csv_file: str,
         num_points: int,
         transform: Optional[Callable] = None,
+        pointcloud_exist: bool = True,
     ):
         """
         Initializes the DrivAerNetDataset instance.
@@ -185,12 +186,18 @@ class DrivAerNetDataset(paddle.io.Dataset):
         self.ids_file = ids_file
         self.transform = transform
         self.num_points = num_points
+        self.pointcloud_exist = pointcloud_exist
         self.augmentation = DataAugmentation()
 
         try:
             with open(os.path.join(self.subset_dir, self.ids_file), "r") as file:
                 subset_ids = file.read().split()
-            self.data_frame[self.data_frame["Design"].isin(subset_ids)].index.tolist()
+            self.subset_indices = self.data_frame[
+                self.data_frame["Design"].isin(subset_ids)
+            ].index.tolist()
+            self.data_frame = self.data_frame.loc[self.subset_indices].reset_index(
+                drop=True
+            )
         except FileNotFoundError as e:
             raise FileNotFoundError(f"Error loading subset file {self.ids_file}: {e}")
 
@@ -237,6 +244,26 @@ class DrivAerNetDataset(paddle.io.Dataset):
             vertices = paddle.concat(x=(vertices, padding), axis=0)
         return vertices
 
+    def _load_point_cloud(self, design_id: str) -> Optional[paddle.Tensor]:
+        load_path = os.path.join(self.root_dir, f"{design_id}.pdparams")
+        if os.path.exists(load_path) and os.path.getsize(load_path) > 0:
+            try:
+                vertices = paddle.load(path=str(load_path))
+
+                num_vertices = vertices.shape[0]
+
+                if num_vertices > self.num_points:
+                    indices = np.random.choice(
+                        num_vertices, self.num_points, replace=False
+                    )
+                    vertices = vertices.numpy()[indices]
+                    vertices = paddle.to_tensor(vertices)
+
+                return vertices
+            except (EOFError, RuntimeError, ValueError) as e:
+                print(f"Error loading point cloud from {load_path}: {e}")
+                return e
+
     def __getitem__(
         self, idx: int, apply_augmentations: bool = True
     ) -> tuple[
@@ -254,29 +281,43 @@ class DrivAerNetDataset(paddle.io.Dataset):
         """
         if paddle.is_tensor(x=idx):
             idx = idx.tolist()
-        row = self.data_frame.iloc[idx]
-        design_id = row["Design"]
-        cd_value = row["Average Cd"]
-        geometry_path = os.path.join(self.root_dir, f"{design_id}.stl")
-        try:
-            mesh = trimesh.load(geometry_path, force="mesh")
-        except Exception as e:
-            logging.error(f"Failed to load STL file: {geometry_path}. Error: {e}")
-            raise
-        vertices = paddle.to_tensor(data=mesh.vertices, dtype="float32")
-        vertices = self._sample_or_pad_vertices(vertices, self.num_points)
-        if apply_augmentations:
-            vertices = self.augmentation.translate_pointcloud(vertices.numpy())
-            vertices = self.augmentation.jitter_pointcloud(vertices)
-        if self.transform:
-            vertices = self.transform(vertices)
-        cd_value = paddle.to_tensor(data=float(cd_value), dtype="float32").reshape([-1])
 
-        return (
-            {self.input_keys[0]: vertices},
-            {self.label_keys[0]: cd_value},
-            {self.weight_keys[0]: paddle.to_tensor(1)},
-        )
+        while True:
+            row = self.data_frame.iloc[idx]
+            design_id = row["Design"]
+            cd_value = row["Average Cd"]
+
+            if self.pointcloud_exist:
+                vertices = self._load_point_cloud(design_id)
+                if vertices is None:
+                    # logging.warning(f"Skipping design {design_id} because point cloud is not found or corrupted.")
+                    idx = (idx + 1) % len(self.data_frame)
+                    continue
+            else:
+                geometry_path = os.path.join(self.root_dir, f"{design_id}.stl")
+                try:
+                    mesh = trimesh.load(geometry_path, force="mesh")
+                except Exception as e:
+                    logging.error(
+                        f"Failed to load STL file: {geometry_path}. Error: {e}"
+                    )
+                    raise
+                vertices = paddle.to_tensor(data=mesh.vertices, dtype="float32")
+                vertices = self._sample_or_pad_vertices(vertices, self.num_points)
+            if apply_augmentations:
+                vertices = self.augmentation.translate_pointcloud(vertices.numpy())
+                vertices = self.augmentation.jitter_pointcloud(vertices)
+            if self.transform:
+                vertices = self.transform(vertices)
+            cd_value = paddle.to_tensor(data=float(cd_value), dtype="float32").reshape(
+                [-1]
+            )
+
+            return (
+                {self.input_keys[0]: vertices},
+                {self.label_keys[0]: cd_value},
+                {self.weight_keys[0]: paddle.to_tensor(1)},
+            )
 
         # return vertices, cd_value
 

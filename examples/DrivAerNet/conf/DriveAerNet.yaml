@@ -20,7 +20,7 @@ hydra:
     subdir: ./
 
 # general settings
-mode: train
+mode: eval
 seed: 1
 output_dir: ${hydra:run.dir}
 log_freq: 100
@@ -54,10 +54,12 @@ TRAIN:
 
 # evaluation settings
 EVAL:
+  num_points: 5000
   batch_size: 1
-  pretrained_model_path: null
+  pretrained_model_path: "CdPrediction_DrivAerNet_r2_100epochs_5k_best_model.pdparams"
   eval_with_no_grad: True
   ids_file: "test_design_ids.txt"
+  num_workers: 32
 
 ARGS:
   cuda: True
@@ -66,6 +68,6 @@ ARGS:
   lr: 0.001
   optimizer: 'adam'
   # dataset settings
-  dataset_path: 'DrivAerNet_STLs_Combined'
-  aero_coeff: 'AeroCoefficients_DrivAerNet_FilteredCorrected.csv'
-  subset_dir: 'subset_dir'
+  dataset_path: '../fsi/DrivAerNetPlusPlus_Processed_Point_Clouds_100k_paddle'
+  aero_coeff: '../fsi/AeroCoefficients_DrivAerNet_FilteredCorrected.csv'
+  subset_dir: '../fsi/subset_dir'

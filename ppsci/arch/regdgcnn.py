@@ -121,17 +121,17 @@ def get_graph_feature(x, k=20, idx=None):
     """
     batch_size = x.shape[0]
     num_points = x.shape[2]
-    x = x.view(batch_size, -1, num_points)
+    x = x.reshape(batch_size, -1, num_points)
     if idx is None:
         idx = knn(x, k=k)
-    idx_base = paddle.arange(start=0, end=batch_size).view(-1, 1, 1) * num_points
+    idx_base = paddle.arange(start=0, end=batch_size).reshape(-1, 1, 1) * num_points
     idx = idx + idx_base
-    idx = idx.view(-1)
+    idx = idx.reshape(-1)
     _, num_dims, _ = tuple(x.shape)
     x = x.transpose(perm=transpose_aux_func(x.ndim, 2, 1)).contiguous()
-    feature = x.view(batch_size * num_points, -1)[idx, :]
-    feature = feature.view(batch_size, num_points, k, num_dims)
-    x = x.view(batch_size, num_points, 1, num_dims).tile(repeat_times=[1, 1, k, 1])
+    feature = x.reshape(batch_size * num_points, -1)[idx, :]
+    feature = feature.reshape(batch_size, num_points, k, num_dims)
+    x = x.reshape(batch_size, num_points, 1, num_dims).tile(repeat_times=[1, 1, k, 1])
     feature = (
         paddle.concat(x=(feature - x, x), axis=3)
         .transpose(perm=[0, 3, 1, 2])
@@ -242,7 +242,7 @@ class RegDGCNN(paddle.nn.Layer):
         x = x[self.input_keys[0]]
         batch_size = x.shape[0]
         num_points = x.shape[1]
-        x = x.view(batch_size, -1, num_points)
+        x = x.reshape(batch_size, -1, num_points)
         x = get_graph_feature(x, k=self.k)
         x = self.conv1(x)
         x1 = x.max(dim=-1, keepdim=False)[0]
@@ -257,10 +257,10 @@ class RegDGCNN(paddle.nn.Layer):
         x4 = x.max(dim=-1, keepdim=False)[0]
         x = paddle.concat(x=(x1, x2, x3, x4), axis=1)
         x = self.conv5(x)
-        x1 = paddle.nn.functional.adaptive_max_pool1d(x=x, output_size=1).view(
+        x1 = paddle.nn.functional.adaptive_max_pool1d(x=x, output_size=1).reshape(
             batch_size, -1
         )
-        x2 = paddle.nn.functional.adaptive_avg_pool1d(x=x, output_size=1).view(
+        x2 = paddle.nn.functional.adaptive_avg_pool1d(x=x, output_size=1).reshape(
             batch_size, -1
         )
         x = paddle.concat(x=(x1, x2), axis=1)
