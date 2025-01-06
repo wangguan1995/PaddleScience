@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import copy
 
-from ppsci.arch.regdgcnn import RegDGCNN
+from ppsci.arch.regdgcnn import RegDGCNN  # isort:skip
+
 from ppsci.arch.afno import AFNONet  # isort:skip
 from ppsci.arch.afno import PrecipNet  # isort:skip
 from ppsci.arch.amgnet import AMGNet  # isort:skip
