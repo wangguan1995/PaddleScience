@@ -14,6 +14,25 @@
 
 # Copyright 2024 Mohamed Elrefaie
 
+"""
+Created on Mon May 29 22:18:28 2023
+
+@author: Mohamed Elrefaie, mohamed.elrefaie@mit.edu, mohamed.elrefaie@tum.de
+
+This module is part of the research presented in the paper
+"DrivAerNet: A Parametric Car Dataset for Data-driven Aerodynamic Design and Graph-Based Drag Prediction".
+It extends the work by introducing a Deep Graph Convolutional Neural Network (RegDGCNN) model for Regression Tasks,
+specifically designed for processing 3D point cloud data of car models from the DrivAerNet dataset.
+
+The RegDGCNN model utilizes a series of graph-based convolutional layers to effectively capture the complex geometric
+and topological structure of 3D car models, facilitating advanced aerodynamic analyses and predictions.
+The model architecture incorporates several techniques, including dynamic graph construction,
+EdgeConv operations, and global feature aggregation, to robustly learn from graphs and point cloud data.
+
+Parts of this code are modified from the original version authored by Yue Wang
+"""
+
+
 from typing import Tuple
 import paddle
 
@@ -79,25 +98,6 @@ def max_class_func(self, *args, **kwargs):
 
 setattr(paddle.Tensor, "min", min_class_func)
 setattr(paddle.Tensor, "max", max_class_func)
-
-"""
-Created on Mon May 29 22:18:28 2023
-
-@author: Mohamed Elrefaie, mohamed.elrefaie@mit.edu, mohamed.elrefaie@tum.de
-
-This module is part of the research presented in the paper
-"DrivAerNet: A Parametric Car Dataset for Data-driven Aerodynamic Design and Graph-Based Drag Prediction".
-It extends the work by introducing a Deep Graph Convolutional Neural Network (RegDGCNN) model for Regression Tasks,
-specifically designed for processing 3D point cloud data of car models from the DrivAerNet dataset.
-
-The RegDGCNN model utilizes a series of graph-based convolutional layers to effectively capture the complex geometric
-and topological structure of 3D car models, facilitating advanced aerodynamic analyses and predictions.
-The model architecture incorporates several techniques, including dynamic graph construction,
-EdgeConv operations, and global feature aggregation, to robustly learn from graphs and point cloud data.
-
-Parts of this code are modified from the original version authored by Yue Wang
-"""
-
 
 def knn(x, k):
     """
