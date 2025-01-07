@@ -52,13 +52,13 @@ python DrivAerNet.py mode=eval EVAL.pretrained_model_path=“训练的时候保�
 
 ## 2. 问题定义
 
-![fig1](.\drivaernet\fig1.jpg)
+![fig1](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig1.jpg)
 
 图1：参数化的DrivAer模型使用变形盒子在ANSA 软件中进行几何变换，总共使用了50个几何参数和32个可变形实体。对变形框进行颜色编码，突出易受参数修改影响的区域，便于创建" DrivAerNet "数据集。利用这种变形技术，本研究生成了4000个独特的汽车设计。
 
 **DrivAer模型Net数据集和模型背景介绍：**DrivAer模型是由慕尼黑工业大学( TUM )的研究人员开发的一种行之有效的传统汽车参考模型。它是宝马3系和奥迪A4汽车设计的结合，以代表大多数传统汽车。DrivAer模型是为了弥补Ahmed和SAE等机构的开源过度简化模型与制造公司的复杂设计之间的差距而开发的，而这些模型并不公开。为了准确地评估真实世界的气动设计，本研究选择了具有详细的下车体、车轮和反射镜( FDwWwM )的快背构型作为本研究的基准模型，如图2a所示。FDwWwM模型的这种选择是由车轮、反射镜和车身底部几何形状对气动阻力的巨大影响所驱动的，这一结论得到了文献[ 17 ]的研究结果的支持。具体来说，详细的底部几何结构增加了32 ~ 34个计数，镜面的加入增加了14 ~ 16个计数，车轮的存在使总阻力系数增加了102个计数。
 
-![fig2](.\drivaernet\fig2.jpg)
+![fig2](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig2.jpg)
 
 图2：DrivAer模型Fastback模型，包含详细的特征，并附有计算网格，说明了网格细化区域和附加层，以准确模拟空气动力学现象。
 
@@ -66,11 +66,11 @@ python DrivAerNet.py mode=eval EVAL.pretrained_model_path=“训练的时候保�
 
 **生成多样化汽车设计的技术：**参数化模型，以及在实验设计( Design of Experiment，DoE )过程中应用的约束和边界，极大地丰富了数据集，使其成为开发和训练用于代理建模和设计优化任务的高级深度学习模型的坚实基础。本研究提供了包含变形特征的参数化模型的访问，以便进一步参考和利用。与[ 19 ]中的方法不同，本研究实现了更广泛的变形技术，使本研究能够探索更多样化的汽车设计。该方法旨在增强深度学习模型的适应性，使其能够泛化到各种汽车设计中，而不是局限于单个设计中的微小几何修改。图3描述了网格质量的变化，从粗到高分辨率的不同数据集。与[ 22 ]和[ 36 ]的研究相比，本研究的原始网格具有540k的网格面，提供了更稠密和更详细的表示，从而揭示了更详细的几何和设计特征。此外，图4给出了来自DrivAerNet数据集的汽车外形图谱，说明了设计尺寸和特征的可变性。这个范围从最大到最小的体积模型强调了数据集覆盖全面的空气动力学剖面的能力。
 
-![fig3](.\drivaernet\fig3.jpg)
+![fig3](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig3.jpg)
 
 图3：不同数据集的网格分辨率比较；第一行特征是Li et al ( 2023 ) [ 22 ]的Ahmed体网格，显示了粗略的分辨率。第二行显示来自ShapeNet数据集的中等分辨率网格，正如Song等人( 2023 ) [ 36 ]所使用的。最后一行展示了我们的高分辨率网格，为深入的气动设计提供了更多的细节。
 
-![fig4](.\drivaernet\fig4.jpg)
+![fig4](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig4.jpg)
 
 图4：来自DrivAerNet数据集的汽车模型，说明了一系列的空气动力学设计。最左边的模型代表了数据集中的最大体积，而最右边的模型代表了体积最小的设计，突出了所研究的气动外形的多样性和范围。
 
@@ -109,13 +109,13 @@ C_p=\frac{p-p_\infty}{\frac{1}{2}\rho u^2}
 $$
 $C_p$在汽车表面的分布如图6b所示。
 
-![table1](.\drivaernet\table1.jpg)
+![table1](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/table1.jpg)
 
 表1：对各种空气动力学数据集进行了比较分析，重点介绍了数据集中的设计数量(大小)、气动力系数(阻力系数$C_d$和升力系数$C_l$)的包含、速度( $u$ )和压力( $p$ )场的包含、车轮/车体建模的存在、进行参数研究的能力、设计参数的数量和开源可用性等关键方面。
 
 #### 2.2 几何可行性
 
-![fig6](.\drivaernet\fig6.jpg)
+![fig6](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig6.jpg)
 
 图6：DrivAerNet数据集包括详细的速度、压力和壁面剪切应力的三维场，以及气动力系数，以及每个入口的车身和前后轮的详细三维网格。
 
@@ -143,19 +143,19 @@ DrivAerNet数据集提供了一套全面的与汽车几何结构相关的空气�
 
 **Drivaernet中汽车设计之间的气动性能变异性：**图7展示了DrivAerNet数据集中阻力系数($C_d$ )和各种升力系数( $C_l、C_{l,r}、C_{l,f}$)之间关系的三个散点图。数据被划分为训练集、验证集和测试集，其中70 %用于训练，15 %用于验证和测试。这样的划分对于模型训练过程的完整性和后续的性能评估至关重要。
 
-![fig7](.\drivaernet\fig7.jpg)
+![fig7](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig7.jpg)
 
 图7：散点图显示了DrivAerNet数据集的阻力系数( $C_d$)和升力系数($C_l、C_{l,r}、C_{l,f}$)之间的关系。该数据集代表了利用增强型随机进化算法( Enhanced Stochastic Evolution Algorithm，ESE )通过最优拉丁超立方抽样方法生成的独特设计变体。数据点分为训练集、验证集和测试集( 70 %、15 %、15 %)。
 
 图8所示的核密度估计( KDE )图比较了两个气动数据集的阻力系数分布。在这里，本研究比较了文献[ 36 ]中的数据集，该数据集跨越了广泛的阻力值，反映了ShapeNet中各种各样的汽车设计。相比之下，本研究的DrivAerNet数据集针对传统的汽车设计，考虑了更详细的几何修改。这一关注点在工程设计过程中尤其相关，因为在工程设计过程中，最初的汽车设计通常是通过增量变化来优化气动性能。因此，DrivAerNet数据集提供了更具体的检查细微的设计调整及其对气动性能的影响。
 
-![fig8](.\drivaernet\fig8.jpg)
+![fig8](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig8.jpg)
 
 图8：两个气动数据集阻力系数的比较核密度估计( KDE )和小提琴图。蓝色曲线代表来自Song等人2023 [ 36 ]的数据集，橙色曲线对应DrivAerNet数据集。DrivAerNet专注于传统的汽车设计，强调微小的几何修改对气动效率的影响。
 
 在图9中，本研究给出了不同设计下的气动性能。左上方说明了阻力系数$C_d$最低的设计。相反，右上角显示了$C_d$最高的设计，识别了气动优化的机会。左下方的设计升力系数$C_l$ (表示最大下压力)最低，有利于高速时的稳定性，而右下方的设计升力系数$C_l$最高，可能使气动稳定性复杂化。
 
-![fig9](.\drivaernet\fig9.jpg)
+![fig9](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig9.jpg)
 
 图9：来自DrivAerNet的汽车设计的气动性能显示了一系列系数。左上：阻力系数$C_d$最小的设计，表明气动效率最优。右上角：$C_d$最大的设计。左下：设计最小升力系数$C_l$  (最大下压力)。右下方：采用最大$C_l$ 设计。
 
@@ -165,7 +165,7 @@ DrivAerNet数据集提供了一套全面的与汽车几何结构相关的空气�
 
 正如[ 1、20、26、29、30、32、34]的研究表明，几何深度学习在解决涉及不规则几何体的流体动力学挑战方面具有重要的前景。
 
-![fig10](.\drivaernet\fig10.jpg)
+![fig10](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig10.jpg)
 
 图10：用于气动阻力预测的RegDGCNN的结构。模型通过将三维网格转换为点云表示的方式进行处理。它取n个输入点，在一个EdgeConv层为每个点计算一个大小为k的边缘特征集，并对每个集合内的特征进行聚合，计算对应点的EdgeConv响应。最后一个EdgeConv层的输出特征进行全局聚合，形成1D全局描述符，然后用于预测气动阻力系数$C_d$，从而可以直接从物体的3D几何结构中学习。Edge Conv块接受一个维度为$n × f$的输入张量，利用多层感知器( MLP )确定每个点的边缘特征。在MLP应用后，通过对相邻的边缘特征进行池化操作，块输出一个维度为$n × a_n$的张量。
 
@@ -214,7 +214,7 @@ $$
 
 对RegDGCNN在DrivAerNet数据集上的性能进行测试，如图11所示，其预测值与CFD真实数据之间具有较好的相关性，说明了模型的有效性。DrivAerNet数据集的复杂性归因于其包含了行业标准形状，通过50个几何参数变化，在空气动力学预测方面提出了全面的挑战。本研究的模型有效地导航了数据集的复杂性，并直接处理了3D网格数据，这标志着传统方法的重大转变，通常依赖于生成符号距离场( SDF )或渲染2D图像。这种直接的方法使本研究在看不见的测试集上达到了0.9的R2分数，强调了模型准确识别细微气动差异的能力。
 
-![fig11](.\drivaernet\fig11.jpg)
+![fig11](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig11.jpg)
 
 图11：本研究的RegDGCNN模型预测的阻力系数$C_d$与DrivAerNet未见测试集的真实值的相关性图，取得了0.9的R2分数。点线表示完全相关的直线，代表理想的预测场景。
 
@@ -222,13 +222,13 @@ $$
 
 为了测试所提出的RegDGCNN模型的可推广性，本研究还在现有的基准数据集上评估了其适应复杂几何形状的能力，使用了来自ShapeNet数据集[ 36 ] (见图12)的2，479种不同的汽车设计，该数据集显示出比本研究的DrivAerNet数据集更广泛的汽车形状。
 
-![fig12](.\drivaernet\fig12.jpg)
+![fig12](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig12.jpg)
 
 图12：从ShapeNet数据集中选取汽车样本，展示了汽车形状和网格分辨率的多样性，用于评估RegDGCNN的泛化能力。这些样本与本研究在DrivAerNet数据集中发现的高分辨率网格提供了一个比较基准。
 
 在表3中，本研究比较了两个模型的性能：attn - ResNeXt模型来自文献[ 36 ]的研究，该模型实现了自注意力机制，以促进对图像各个区域之间相互作用的理解。它使用2D深度/正常渲染作为输入，具有大约20亿个参数，实现了0.84的$R^2$分数；本研究提出的RegDGCNN模型，直接处理三维网格数据，显著减少了参数数量至300万，并取得了优异的R2评分0.87。这种比较强调了本研究的模型在气动阻力预测任务中的效率和有效性。
 
-![table3](.\drivaernet\table3.jpg)
+![table3](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/table3.jpg)
 
 ##### 3.2.3 训练数据集大小的影响
 
@@ -236,7 +236,7 @@ $$
 
 图13显示了一个明显的趋势，拖曳系数预测的平均相对误差随着用于训练的数据集百分比的增加而减少。这种趋势对于两个数据集都是一致的，强调了共同的机器学习原理，即更多的训练数据通常会导致更好的模型性能。DrivAerNet Dataset在所有大小的训练数据上的性能提升凸显了更大数据集在空气动力学机器学习模型中的关键作用，并进一步确立了DrivAerNet数据集的价值，其价值显著大于以往的开源数据集。
 
-![fig13](.\drivaernet\fig13.jpg)
+![fig13](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig13.jpg)
 
 图13：基于训练集大小，本研究的模型RegDGCNN在未知测试集上阻力系数预测的平均相对误差。ShapeNet拖拽数据集[ 36 ]的结果用蓝色表示，而DrivAerNet数据集的结果用橙色表示。训练集大小从20 %到100 %不等。本研究观察到数据集规模的增加会导致显著的误差降低，表明了在气动代理模型建模中使用更大数据集的必要性。
 
@@ -256,7 +256,7 @@ $$
 
 为了进一步评估模型的性能，本研究分析了边缘卷积操作后中间层学习到的特征。图14说明了从DrivAerNet获取的汽车样本的上采样点云的特征重要性分布，颜色编码从浅黄色(低重要性)到深红色(高重要性)。最初，RegDGCNN对汽车的前部和后部区域进行调零，这对塑造气动性能至关重要。这一关注点对于气动设计具有显著的针对性，因为前部区域对压差阻力有重要影响，后部区域由于在气流分离和尾流区形成中的作用而显得尤为重要。随着模型向更深的层次发展，它开始识别更复杂的几何细节。相反，屋顶和窗户等区域对阻力的影响较小，突出了模型在识别具有更显著气动影响的区域方面的能力。
 
-![fig14](.\drivaernet\fig14.jpg)
+![fig14](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig14.jpg)
 
 图14：从RegDGCNN导出的DrivAerNet的汽车模型的上采样点云的特征重要性的可视化，特别关注来自EdgeConv层的特征。特征强度由低(浅黄色)到高(深红色)的颜色编码，表明了卷积层显著学习焦点的区域。这种映射突出了学习到的有助于模型预测的特征。
 
@@ -1073,7 +1073,7 @@ RegDGCNN的另一个限制是，在当前形式下，对于大规模点云，Reg
 |          80           |                 15%                 |                    NULL                    |
 |          100          |                 13%                 |                   7.48%                    |
 
-![fig15](.\drivaernet\fig15.png)
+![fig15](https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/fig/fig15.png)
 
 图15：训练过程中的过程损失曲线变化。
 
