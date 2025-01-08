@@ -13,11 +13,8 @@
 # limitations under the License.
 
 from __future__ import annotations
-
 from typing import Dict
-
 import paddle
-
 from ppsci.metric import base
 
 
