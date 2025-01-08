@@ -35,7 +35,7 @@ Parts of this code are modified from the original version authored by Yue Wang
 
 from typing import Tuple
 import paddle
-
+import numpy as np
 
 def transpose_aux_func(dims, dim0, dim1):
     perm = list(range(dims))
