@@ -1,15 +1,16 @@
-import logging
-import os
-from typing import Callable
-from typing import Optional
-from typing import Tuple
+# Copyright (c) 2023 PaddlePaddle Authors. All Rights Reserved.
 
-import numpy as np
-import paddle
-import pandas as pd
-import pyvista as pv
-import seaborn as sns
-import trimesh
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """
 Created on Tue Dec 19 20:54:56 2023
@@ -25,74 +26,15 @@ It includes functionality to subsample or pad the vertices of the models to a fi
 visualization methods for the DrivAerNet dataset.
 """
 
+import logging
+import os
+from typing import Callable
+from typing import Optional
+from typing import Tuple
 
-class DataAugmentation:
-    """
-    Class encapsulating various data augmentation techniques for point clouds.
-    """
-
-    @staticmethod
-    def translate_pointcloud(
-        pointcloud: paddle.Tensor,
-        translation_range: Tuple[float, float] = (2.0 / 3.0, 3.0 / 2.0),
-    ) -> paddle.Tensor:
-        """
-        Translates the pointcloud by a random factor within a given range.
-
-        Args:
-            pointcloud: The input point cloud as a paddle.Tensor.
-            translation_range: A tuple specifying the range for translation factors.
-
-        Returns:
-            Translated point cloud as a paddle.Tensor.
-        """
-        xyz1 = np.random.uniform(
-            low=translation_range[0], high=translation_range[1], size=[3]
-        )
-        xyz2 = np.random.uniform(low=-0.2, high=0.2, size=[3])
-        translated_pointcloud = np.add(np.multiply(pointcloud, xyz1), xyz2).astype(
-            "float32"
-        )
-        return paddle.to_tensor(data=translated_pointcloud, dtype="float32")
-
-    @staticmethod
-    def jitter_pointcloud(
-        pointcloud: paddle.Tensor, sigma: float = 0.01, clip: float = 0.02
-    ) -> paddle.Tensor:
-        """
-        Adds Gaussian noise to the pointcloud.
-
-        Args:
-            pointcloud: The input point cloud as a paddle.Tensor.
-            sigma: Standard deviation of the Gaussian noise.
-            clip: Maximum absolute value for noise.
-
-        Returns:
-            Jittered point cloud as a paddle.Tensor.
-        """
-        N, C = tuple(pointcloud.shape)
-        jittered_pointcloud = pointcloud + paddle.clip(
-            x=sigma * paddle.randn(shape=[N, C]), min=-clip, max=clip
-        )
-        return jittered_pointcloud
-
-    @staticmethod
-    def drop_points(pointcloud: paddle.Tensor, drop_rate: float = 0.1) -> paddle.Tensor:
-        """
-        Randomly removes points from the point cloud based on the drop rate.
-
-        Args:
-            pointcloud: The input point cloud as a paddle.Tensor.
-            drop_rate: The percentage of points to be randomly dropped.
-
-        Returns:
-            The point cloud with points dropped as a paddle.Tensor.
-        """
-        num_drop = int(drop_rate * pointcloud.shape[0])
-        drop_indices = np.random.choice(pointcloud.shape[0], num_drop, replace=False)
-        keep_indices = np.setdiff1d(np.arange(pointcloud.shape[0]), drop_indices)
-        dropped_pointcloud = pointcloud[keep_indices, :]
-        return dropped_pointcloud
+import numpy as np
+import paddle
+import pandas as pd
 
 
 class DrivAerNetDataset(paddle.io.Dataset):
@@ -187,7 +129,7 @@ class DrivAerNetDataset(paddle.io.Dataset):
         self.transform = transform
         self.num_points = num_points
         self.pointcloud_exist = pointcloud_exist
-        self.augmentation = DataAugmentation()
+        self.cache = {}
 
         try:
             with open(os.path.join(self.subset_dir, self.ids_file), "r") as file:
@@ -279,173 +221,45 @@ class DrivAerNetDataset(paddle.io.Dataset):
         Returns:
             Tuple[paddle.Tensor, paddle.Tensor]: The sample (point cloud) and its label (Cd value).
         """
+        """
+        Retrieves a sample and its corresponding label from the dataset, with an option to apply augmentations.
+
+        Args:
+            idx (int): Index of the sample to retrieve.
+            apply_augmentations (bool, optional): Whether to apply data augmentations. Defaults to True.
+
+        Returns:
+            Tuple[paddle.Tensor, paddle.Tensor]: The sample (point cloud) and its label (Cd value).
+        """
         if paddle.is_tensor(x=idx):
             idx = idx.tolist()
 
-        while True:
-            row = self.data_frame.iloc[idx]
-            design_id = row["Design"]
-            cd_value = row["Average Cd"]
+        if idx in self.cache:
+            return self.cache[idx]
 
-            if self.pointcloud_exist:
+        row = self.data_frame.iloc[idx]
+        design_id = row['Design']
+        cd_value = row['Average Cd']
+        if self.pointcloud_exist:
+            try:
                 vertices = self._load_point_cloud(design_id)
                 if vertices is None:
-                    # logging.warning(f"Skipping design {design_id} because point cloud is not found or corrupted.")
-                    idx = (idx + 1) % len(self.data_frame)
-                    continue
-            else:
-                geometry_path = os.path.join(self.root_dir, f"{design_id}.stl")
-                try:
-                    mesh = trimesh.load(geometry_path, force="mesh")
-                except Exception as e:
-                    logging.error(
-                        f"Failed to load STL file: {geometry_path}. Error: {e}"
-                    )
-                    raise
-                vertices = paddle.to_tensor(data=mesh.vertices, dtype="float32")
-                vertices = self._sample_or_pad_vertices(vertices, self.num_points)
-            if apply_augmentations:
-                vertices = self.augmentation.translate_pointcloud(vertices.numpy())
-                vertices = self.augmentation.jitter_pointcloud(vertices)
-            if self.transform:
-                vertices = self.transform(vertices)
-            cd_value = paddle.to_tensor(data=float(cd_value), dtype="float32").reshape(
-                [-1]
-            )
+                    raise ValueError(f"Point cloud for design {design_id} is not found or corrupted.")
+            except Exception as e:
+                raise ValueError(f"Failed to load point cloud for design {design_id}: {e}")
 
-            return (
-                {self.input_keys[0]: vertices},
-                {self.label_keys[0]: cd_value},
-                {self.weight_keys[0]: paddle.to_tensor(1)},
-            )
+        if self.transform:
+            vertices = self.transform(vertices)
+        cd_value = paddle.to_tensor(data=float(cd_value), dtype="float32").reshape([-1])
 
-        # return vertices, cd_value
-
-    def visualize_mesh(self, idx):
-        """
-        Visualize the STL mesh for a specific design from the dataset.
-
-        Args:
-            idx (int): Index of the design to visualize in the dataset.
-
-        This function loads the mesh from the STL file corresponding to the design ID at the given index,
-        wraps it using PyVista for visualization, and then sets up a PyVista plotter to display the mesh.
-        """
-        row = self.data_frame.iloc[idx]
-        design_id = row["Design"]
-        geometry_path = os.path.join(self.root_dir, f"{design_id}.stl")
-        try:
-            mesh = trimesh.load(geometry_path, force="mesh")
-        except Exception as e:
-            logging.error(f"Failed to load STL file: {geometry_path}. Error: {e}")
-            raise
-        pv_mesh = pv.wrap(mesh)
-        plotter = pv.Plotter()
-        plotter.add_mesh(pv_mesh, color="lightgrey", show_edges=True)
-        plotter.add_axes()
-        camera_position = [
-            (-11.073024242161921, -5.621499358347753, 5.862225824910342),
-            (1.458462064391673, 0.002314306982062475, 0.6792134746589196),
-            (0.34000174095454166, 0.10379556639001211, 0.9346792479485448),
-        ]
-        plotter.camera_position = camera_position
-        plotter.show()
-
-    def visualize_mesh_withNode(self, idx):
-        """
-        Visualizes the mesh for a specific design from the dataset with nodes highlighted.
-
-        Args:
-            idx (int): Index of the design to visualize in the dataset.
-
-        This function loads the mesh from the STL file and highlights the nodes (vertices) of the mesh using spheres.
-        It uses seaborn to obtain visually distinct colors for the mesh and nodes.
-        """
-        row = self.data_frame.iloc[idx]
-        design_id = row["Design"]
-        geometry_path = os.path.join(self.root_dir, f"{design_id}.stl")
-        try:
-            mesh = trimesh.load(geometry_path, force="mesh")
-            pv_mesh = pv.wrap(mesh)
-        except Exception as e:
-            logging.error(f"Failed to load STL file: {geometry_path}. Error: {e}")
-            raise
-        plotter = pv.Plotter()
-        sns_blue = sns.color_palette("colorblind")[0]
-        plotter.add_mesh(
-            pv_mesh, color="lightgrey", show_edges=True, edge_color="black"
+        self.cache[idx] = (
+            {self.input_keys[0]: vertices},
+            {self.label_keys[0]: cd_value},
+            {self.weight_keys[0]: paddle.to_tensor(1)},
         )
-        nodes = pv_mesh.points
-        plotter.add_points(
-            nodes, color=sns_blue, point_size=10, render_points_as_spheres=True
+
+        return (
+            {self.input_keys[0]: vertices},
+            {self.label_keys[0]: cd_value},
+            {self.weight_keys[0]: paddle.to_tensor(1)},
         )
-        plotter.add_axes()
-        plotter.show()
-
-    def visualize_point_cloud(self, idx):
-        """
-        Visualizes the point cloud for a specific design from the dataset.
-
-        Args:
-            idx (int): Index of the design to visualize in the dataset.
-
-        This function retrieves the vertices for the specified design, converts them into a point cloud,
-        and uses the z-coordinate for color mapping. PyVista's Eye-Dome Lighting is enabled for improved depth perception.
-        """
-        vertices, _ = self.__getitem__(idx)
-        vertices = vertices.numpy()
-        point_cloud = pv.PolyData(vertices)
-        colors = vertices[:, 2]
-        point_cloud["colors"] = colors
-        plotter = pv.Plotter()
-        plotter.add_points(
-            point_cloud,
-            scalars="colors",
-            cmap="Blues",
-            point_size=3,
-            render_points_as_spheres=True,
-        )
-        plotter.enable_eye_dome_lighting()
-        plotter.add_axes()
-        camera_position = [
-            (-11.073024242161921, -5.621499358347753, 5.862225824910342),
-            (1.458462064391673, 0.002314306982062475, 0.6792134746589196),
-            (0.34000174095454166, 0.10379556639001211, 0.9346792479485448),
-        ]
-        plotter.camera_position = camera_position
-        plotter.show()
-
-    def visualize_augmentations(self, idx):
-        """
-        Visualizes various augmentations applied to the point cloud of a specific design in the dataset.
-
-        Args:
-            idx (int): Index of the sample in the dataset to be visualized.
-
-        This function retrieves the original point cloud for the specified design and then applies a series of augmentations,
-        including translation, jittering, and point dropping. Each version of the point cloud (original and augmented) is then
-        visualized in a 2x2 grid using PyVista to illustrate the effects of these augmentations.
-        """
-        vertices, _ = self.__getitem__(idx, apply_augmentations=False)
-        original_pc = pv.PolyData(vertices.numpy())
-        translated_pc = self.augmentation.translate_pointcloud(vertices.numpy())
-        jittered_pc = self.augmentation.jitter_pointcloud(translated_pc)
-        dropped_pc = self.augmentation.drop_points(jittered_pc)
-        plotter = pv.Plotter(shape=(2, 2))
-        plotter.subplot(0, 0)
-        plotter.add_text("Original Point Cloud", font_size=10)
-        plotter.add_mesh(original_pc, color="black", point_size=3)
-        plotter.subplot(0, 1)
-        plotter.add_text("Translated Point Cloud", font_size=10)
-        plotter.add_mesh(
-            pv.PolyData(translated_pc.numpy()), color="lightblue", point_size=3
-        )
-        plotter.subplot(1, 0)
-        plotter.add_text("Jittered Point Cloud", font_size=10)
-        plotter.add_mesh(
-            pv.PolyData(jittered_pc.numpy()), color="lightgreen", point_size=3
-        )
-        plotter.subplot(1, 1)
-        plotter.add_text("Dropped Point Cloud", font_size=10)
-        plotter.add_mesh(pv.PolyData(dropped_pc.numpy()), color="salmon", point_size=3)
-        plotter.show()
