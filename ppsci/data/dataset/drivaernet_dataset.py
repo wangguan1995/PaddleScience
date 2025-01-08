@@ -20,10 +20,8 @@ Created on Tue Dec 19 20:54:56 2023
 This module is part of the research presented in the paper":
 "DrivAerNet: A Parametric Car Dataset for Data-driven Aerodynamic Design and Graph-Based Drag Prediction".
 
-The module defines a Paddle Dataset for loading and transforming 3D car models from the DrivAerNet dataset
-stored as STL files.
-It includes functionality to subsample or pad the vertices of the models to a fixed number of points as well as
-visualization methods for the DrivAerNet dataset.
+The module defines two Paddle Datasets for loading and transforming 3D car models from the DrivAerNet++ dataset:
+1. DrivAerNetDataset: Handles point cloud data, allowing loading, transforming, and augmenting 3D car models.
 """
 
 import logging
