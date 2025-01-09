@@ -16,7 +16,6 @@ import warnings
 from os import path as osp
 
 import hydra
-import paddle
 from omegaconf import DictConfig
 
 import ppsci
@@ -49,6 +48,8 @@ def train(cfg: DictConfig):
             "ids_file": cfg.TRAIN.train_ids_file,
             "csv_file": cfg.ARGS.aero_coeff,
             "num_points": cfg.TRAIN.num_points,
+            "train_fractions": cfg.TRAIN.train_fractions,
+            "mode": cfg.mode,
         },
         "batch_size": cfg.TRAIN.batch_size,
         "sampler": {
@@ -78,6 +79,7 @@ def train(cfg: DictConfig):
             "ids_file": cfg.TRAIN.eval_ids_file,
             "csv_file": cfg.ARGS.aero_coeff,
             "num_points": cfg.TRAIN.num_points,
+            "mode": cfg.mode,
         },
         "batch_size": cfg.TRAIN.batch_size,
         "sampler": {
@@ -98,12 +100,14 @@ def train(cfg: DictConfig):
     validator = {drivaernet_valid.name: drivaernet_valid}
 
     # set optimizer
-    lr_scheduler = paddle.optimizer.lr.ReduceOnPlateau(
+    lr_scheduler = ppsci.optimizer.lr_scheduler.ReduceOnPlateau(
+        epochs=cfg.TRAIN.epochs,
+        iters_per_epoch=cfg.TRAIN.iters_per_epoch,
+        learning_rate=cfg.ARGS.lr,
         mode=cfg.TRAIN.scheduler.mode,
         patience=cfg.TRAIN.scheduler.patience,
         factor=cfg.TRAIN.scheduler.factor,
         verbose=cfg.TRAIN.scheduler.verbose,
-        learning_rate=cfg.ARGS.lr,
     )()
 
     optimizer = (
@@ -159,6 +163,7 @@ def evaluate(cfg: DictConfig):
             "ids_file": cfg.EVAL.ids_file,
             "csv_file": cfg.ARGS.aero_coeff,
             "num_points": cfg.EVAL.num_points,
+            "mode": cfg.mode,
         },
         "batch_size": cfg.EVAL.batch_size,
         "sampler": {
