@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import warnings
 from os import path as osp
 
 import hydra
-import paddle
 from omegaconf import DictConfig
 
 import ppsci
 from ppsci.utils import logger
+
+sys.path.append("/workspace/PaddleScience_repo/PaddleScience_DrivAerNet++")
 
 
 def train(cfg: DictConfig):
@@ -98,12 +100,14 @@ def train(cfg: DictConfig):
     validator = {drivaernet_valid.name: drivaernet_valid}
 
     # set optimizer
-    lr_scheduler = paddle.optimizer.lr.ReduceOnPlateau(
+    lr_scheduler = ppsci.optimizer.lr_scheduler.ReduceOnPlateau(
+        epochs=cfg.TRAIN.epochs,
+        iters_per_epoch=cfg.TRAIN.iters_per_epoch,
+        learning_rate=cfg.ARGS.lr,
         mode=cfg.TRAIN.scheduler.mode,
         patience=cfg.TRAIN.scheduler.patience,
         factor=cfg.TRAIN.scheduler.factor,
         verbose=cfg.TRAIN.scheduler.verbose,
-        learning_rate=cfg.ARGS.lr,
     )()
 
     optimizer = (
@@ -206,4 +210,6 @@ def main(cfg: DictConfig):
 
 
 if __name__ == "__main__":
+    # python -m paddle.distributed.launch --gpus=0,2,6,7 DrivAerNet.py
+    # python DrivAerNet.py
     main()

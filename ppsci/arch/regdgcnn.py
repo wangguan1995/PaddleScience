@@ -34,8 +34,10 @@ Parts of this code are modified from the original version authored by Yue Wang
 
 
 from typing import Tuple
-import paddle
+
 import numpy as np
+import paddle
+
 
 def transpose_aux_func(dims, dim0, dim1):
     perm = list(range(dims))
@@ -49,8 +51,10 @@ class DataAugmentation:
     """
 
     @staticmethod
-    def translate_pointcloud(pointcloud: paddle.Tensor, translation_range:
-    Tuple[float, float] = (2.0 / 3.0, 3.0 / 2.0)) -> paddle.Tensor:
+    def translate_pointcloud(
+        pointcloud: paddle.Tensor,
+        translation_range: Tuple[float, float] = (2.0 / 3.0, 3.0 / 2.0),
+    ) -> paddle.Tensor:
         """
         Translates the pointcloud by a random factor within a given range.
 
@@ -61,16 +65,19 @@ class DataAugmentation:
         Returns:
             Translated point cloud as a paddle.Tensor.
         """
-        xyz1 = np.random.uniform(low=translation_range[0], high=
-        translation_range[1], size=[3])
+        xyz1 = np.random.uniform(
+            low=translation_range[0], high=translation_range[1], size=[3]
+        )
         xyz2 = np.random.uniform(low=-0.2, high=0.2, size=[3])
-        translated_pointcloud = np.add(np.multiply(pointcloud, xyz1), xyz2
-                                       ).astype('float32')
-        return paddle.to_tensor(data=translated_pointcloud, dtype='float32')
+        translated_pointcloud = np.add(np.multiply(pointcloud, xyz1), xyz2).astype(
+            "float32"
+        )
+        return paddle.to_tensor(data=translated_pointcloud, dtype="float32")
 
     @staticmethod
-    def jitter_pointcloud(pointcloud: paddle.Tensor, sigma: float = 0.01,
-                          clip: float = 0.02) -> paddle.Tensor:
+    def jitter_pointcloud(
+        pointcloud: paddle.Tensor, sigma: float = 0.01, clip: float = 0.02
+    ) -> paddle.Tensor:
         """
         Adds Gaussian noise to the pointcloud.
 
@@ -83,13 +90,13 @@ class DataAugmentation:
             Jittered point cloud as a paddle.Tensor.
         """
         N, C = tuple(pointcloud.shape)
-        jittered_pointcloud = pointcloud + paddle.clip(x=sigma * paddle.
-                                                       randn(shape=[N, C]), min=-clip, max=clip)
+        jittered_pointcloud = pointcloud + paddle.clip(
+            x=sigma * paddle.randn(shape=[N, C]), min=-clip, max=clip
+        )
         return jittered_pointcloud
 
     @staticmethod
-    def drop_points(pointcloud: paddle.Tensor, drop_rate: float = 0.1
-                    ) -> paddle.Tensor:
+    def drop_points(pointcloud: paddle.Tensor, drop_rate: float = 0.1) -> paddle.Tensor:
         """
         Randomly removes points from the point cloud based on the drop rate.
 
@@ -101,12 +108,11 @@ class DataAugmentation:
             The point cloud with points dropped as a paddle.Tensor.
         """
         num_drop = int(drop_rate * pointcloud.shape[0])
-        drop_indices = np.random.choice(pointcloud.shape[0], num_drop,
-                                        replace=False)
-        keep_indices = np.setdiff1d(np.arange(pointcloud.shape[0]),
-                                    drop_indices)
+        drop_indices = np.random.choice(pointcloud.shape[0], num_drop, replace=False)
+        keep_indices = np.setdiff1d(np.arange(pointcloud.shape[0]), drop_indices)
         dropped_pointcloud = pointcloud[keep_indices, :]
         return dropped_pointcloud
+
 
 def knn(x, k):
     """
@@ -148,19 +154,21 @@ def get_graph_feature(x, k=20, idx=None):
     x = x.reshape([batch_size, -1, num_points])
     if idx is None:
         idx = knn(x, k=k)
-    idx_base = paddle.arange(start=0, end=batch_size).reshape([-1, 1, 1]
-                                                              ) * num_points
+    idx_base = paddle.arange(start=0, end=batch_size).reshape([-1, 1, 1]) * num_points
     idx = idx + idx_base
     idx = idx.reshape([-1])
     _, num_dims, _ = tuple(x.shape)
-    x = x.transpose(perm=transpose_aux_func(x.ndim, 2, 1)
-                    ).contiguous()
+    x = x.transpose(perm=transpose_aux_func(x.ndim, 2, 1)).contiguous()
     feature = x.reshape([batch_size * num_points, -1])[idx, :]
     feature = feature.reshape([batch_size, num_points, k, num_dims])
-    x = x.reshape([batch_size, num_points, 1, num_dims]).tile(repeat_times=[1, 1,
-                                                                            k, 1])
-    feature = paddle.concat(x=(feature - x, x), axis=3).transpose(perm=[0,
-                                                                        3, 1, 2]).contiguous()
+    x = x.reshape([batch_size, num_points, 1, num_dims]).tile(repeat_times=[1, 1, k, 1])
+    feature = (
+        paddle.concat(x=(feature - x, x), axis=3)
+        .transpose(perm=[0, 3, 1, 2])
+        .contiguous()
+    )
+    del x, idx, idx_base
+    paddle.device.cuda.empty_cache()
     return feature
 
 
@@ -282,28 +290,28 @@ class RegDGCNN(paddle.nn.Layer):
         # Ensure the processed tensor has the same shape as the original input
         if x_processed.shape != x.shape:
             raise ValueError(
-                f"Processed tensor shape {x_processed.shape} does not match original input shape {x.shape}")
+                f"Processed tensor shape {x_processed.shape} does not match original input shape {x.shape}"
+            )
         x = x_processed.transpose(perm=[0, 2, 1])
-        
         x = get_graph_feature(x, k=self.k)
         x = self.conv1(x)
-        x1 = x.max(axis=-1, keepdim=False)[0]
+        x1 = x.max(axis=-1, keepdim=False)
         x = get_graph_feature(x1, k=self.k)
         x = self.conv2(x)
-        x2 = x.max(axis=-1, keepdim=False)[0]
+        x2 = x.max(axis=-1, keepdim=False)
         x = get_graph_feature(x2, k=self.k)
         x = self.conv3(x)
-        x3 = x.max(axis=-1, keepdim=False)[0]
+        x3 = x.max(axis=-1, keepdim=False)
         x = get_graph_feature(x3, k=self.k)
         x = self.conv4(x)
-        x4 = x.max(axis=-1, keepdim=False)[0]
+        x4 = x.max(axis=-1, keepdim=False)
         x = paddle.concat(x=(x1, x2, x3, x4), axis=1)
         x = self.conv5(x)
         x1 = paddle.nn.functional.adaptive_max_pool1d(x=x, output_size=1).reshape(
-            batch_size, -1
+            [batch_size, -1]
         )
         x2 = paddle.nn.functional.adaptive_avg_pool1d(x=x, output_size=1).reshape(
-            batch_size, -1
+            [batch_size, -1]
         )
         x = paddle.concat(x=(x1, x2), axis=1)
         x = paddle.nn.functional.leaky_relu(

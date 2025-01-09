@@ -20,7 +20,7 @@ hydra:
     subdir: ./
 
 # general settings
-mode: eval
+mode: train
 seed: 1
 output_dir: ${hydra:run.dir}
 log_freq: 100
@@ -45,7 +45,7 @@ TRAIN:
   eval_during_train: True
   train_ids_file: "train_design_ids.txt"
   eval_ids_file: "val_design_ids.txt"
-  batch_size: 32
+  batch_size: 2
   scheduler:
     mode: "min"
     patience: 20
@@ -55,8 +55,8 @@ TRAIN:
 # evaluation settings
 EVAL:
   num_points: 5000
-  batch_size: 1
-  pretrained_model_path: "CdPrediction_DrivAerNet_r2_100epochs_5k_best_model.pdparams"
+  batch_size: 2
+  pretrained_model_path: "https://dataset.bj.bcebos.com/PaddleScience/DNNFluid-Car/DrivAer/CdPrediction_DrivAerNet_r2_100epochs_5k_best_model.pdparams"
   eval_with_no_grad: True
   ids_file: "test_design_ids.txt"
   num_workers: 32
