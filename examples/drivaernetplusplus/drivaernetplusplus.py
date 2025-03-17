@@ -19,17 +19,14 @@ from functools import partial
 import hydra
 import paddle
 from omegaconf import DictConfig
-
+from KAN import KAN
 import ppsci
 
 
 def train(cfg: DictConfig):
     # set model
-    model = ppsci.arch.RegPointNet(
-        input_keys=cfg.MODEL.input_keys,
-        output_keys=cfg.MODEL.output_keys,
-        weight_keys=cfg.MODEL.weight_keys,
-        args=cfg.MODEL,
+    model = KAN(
+        layers_hidden=[3,5,5,1], 
     )
 
     train_dataloader_cfg = {
