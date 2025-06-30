@@ -118,7 +118,7 @@ class Trainer:
         self.sweep_id = sweep_id
         self.log_to_screen = params.log_to_screen
         self.train_loss = nn.MSELoss()
-        self.startEpoch = 0
+        self.start_epoch = 0
         self.epoch = 0
         self.debug_grad = params.debug_grad
         self.mp_type = (
@@ -139,7 +139,7 @@ class Trainer:
             logger.info("Starting from pretrained model at %s" % params.pretrained_ckpt_path)
             self.restore_checkpoint(params.pretrained_ckpt_path)
             self.iters = 0
-            self.startEpoch = 0
+            self.start_epoch = 0
         else:
             pass
 
@@ -243,14 +243,14 @@ class Trainer:
             if self.params.learning_rate < 0:
                 self.scheduler = paddle.optimizer.lr.CosineAnnealingDecay(
                     learning_rate=self.optimizer.get_lr(),
-                    last_epoch=(self.startEpoch * params.epoch_size) - 1,
+                    last_epoch=(self.start_epoch * params.epoch_size) - 1,
                     T_max=sched_epochs * params.epoch_size,
                     eta_min=params.learning_rate / 100,
                 )
                 self.optimizer.set_lr_scheduler(self.scheduler)
             else:
                 k = params.warmup_steps
-                if (self.startEpoch * params.epoch_size) < k:
+                if (self.start_epoch * params.epoch_size) < k:
                     warmup = paddle.optimizer.lr.LinearLR(
                         learning_rate=self.optimizer.get_lr(),
                         start_factor=0.01,
@@ -313,8 +313,8 @@ class Trainer:
 
         if self.params.resuming:
             self.optimizer.set_state_dict(checkpoint["optimizer_state_dict"])
-            self.startEpoch = checkpoint["epoch"]
-            self.epoch = self.startEpoch
+            self.start_epoch = checkpoint["epoch"]
+            self.epoch = self.start_epoch
             self.iters = checkpoint["iters"]
         else:
             self.iters = 0
@@ -539,7 +539,7 @@ class Trainer:
                 logs = {
                     "valid_nrmse":paddle.zeros([1]),
                     "valid_l2":paddle.zeros([1]),
-                    }
+                }
                 if hasattr(self.valid_dataset, "sub_dsets"):
                     for subset_group in self.valid_dataset.sub_dsets:
                         for subset in subset_group.get_per_file_dsets():
@@ -558,7 +558,7 @@ class Trainer:
 
     def train(self):
         logger.info(f"iters per epoch = {len(self.train_data_loader)}, samples number = {len(self.train_dataset)}, batch size = {self.params.batch_size}, total batches = {len(self.train_data_loader)*self.params.batch_size}")
-        for epoch in range(self.startEpoch, self.params.max_epochs):
+        for epoch in range(self.start_epoch, self.params.max_epochs):
             if dist.is_initialized():
                 self.train_sampler.set_epoch(epoch)
             train_logs = self.train_one_epoch()
@@ -587,14 +587,8 @@ def train(config: DictConfig):
     world_size = int(os.environ.get("WORLD_SIZE", 1))
 
     params.batch_size = int(params.batch_size // world_size)
-    params.startEpoch = 0
-    if config.sweep_id:
-        jid = os.environ["SLURM_JOBID"]
-        exp_dir = os.path.join(
-            params.exp_dir, config.sweep_id, config.config, str(config.run_name), jid
-        )
-    else:
-        exp_dir = os.path.join(params.exp_dir, config.config, str(config.run_name))
+    params.start_epoch = 0
+    exp_dir = os.path.join(params.exp_dir, config.config, str(config.run_name))
 
 
     if global_rank == 0:
@@ -707,8 +701,6 @@ def inference(config):
             u.detach() / paddle.abs(u).max(),
             targets.detach() / paddle.abs(targets).max(),
         )
-        # logger.info(data_loss.item())
-        # logger.info(data_loss_normalized.item())
         losses_normalized.append(data_loss_normalized.item())
         truth_list.append(targets)
         pred_list.append(u)
