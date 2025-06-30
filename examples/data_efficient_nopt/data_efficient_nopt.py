@@ -216,8 +216,8 @@ class Trainer:
             elif self.params.mode == "finetune":
                 logger.info("Using Build FNO")
                 self.model = build_fno(params)
-        elif self.params.model_type == "vmae":
-            self.model = build_vmae(params)
+        else:
+            raise NotImplementedError("Only support FNO for now")
 
         if dist.is_initialized():
             self.model = paddle.DataParallel(
@@ -234,14 +234,6 @@ class Trainer:
         if params.optimizer == "adam":
             self.optimizer = optim.AdamW(
                 parameters=parameters, learning_rate=params.learning_rate
-            )
-        elif params.optimizer == "adan":
-            raise NotImplementedError("Adan not implemented yet")
-        elif params.optimizer == "sgd":
-            self.optimizer = optim.SGD(
-                parameters=self.model.parameters(),
-                learning_rate=params.learning_rate,
-                momentum=0.9,
             )
         else:
             raise ValueError(f"Optimizer {params.optimizer} not supported")
