@@ -13,13 +13,14 @@
 # limitations under the License.
 
 import gc
-import logging
 import os
 import random
+import time
 from argparse import Namespace
 from collections import OrderedDict
 
 import hydra
+import logging
 import numpy as np
 import paddle
 import paddle.amp as amp
@@ -36,10 +37,12 @@ from tqdm import tqdm
 
 from ppsci.arch.data_efficient_nopt_model import YParams
 from ppsci.arch.data_efficient_nopt_model import build_fno
+from ppsci.arch.data_efficient_nopt_model import build_vmae
 from ppsci.arch.data_efficient_nopt_model import fno_pretrain as fno
 from ppsci.arch.data_efficient_nopt_model import gaussian_blur
 from ppsci.data.dataset.data_efficient_nopt_dataset import MixedDatasetLoader
 from ppsci.data.dataset.data_efficient_nopt_dataset import PoisHelmDatasetLoader
+
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +92,12 @@ def param_diff(params1, params2):
 
 
 def add_weight_decay(model, weight_decay=1e-5, inner_lr=1e-3, skip_list=()):
+    """From Ross Wightman at:
+    https://discuss.pytorch.org/t/weight-decay-in-the-optimizers-is-a-bad-idea-especially-with-batchnorm/16994/3
+
+    Goes through the parameter list and if the squeeze dim is 1 or 0 (usually means bias or scale)
+    then don't apply weight decay.
+    """
     decay = []
     no_decay = []
     for name, param in model.named_parameters():
@@ -108,8 +117,7 @@ def add_weight_decay(model, weight_decay=1e-5, inner_lr=1e-3, skip_list=()):
 
 
 class Trainer:
-    def __init__(self, params, global_rank, local_rank, device, sweep_id=None):
-        self.device = device
+    def __init__(self, params, global_rank, local_rank, sweep_id=None):
         self.params = params
         self.global_rank = global_rank
         self.local_rank = local_rank
@@ -135,9 +143,7 @@ class Trainer:
             logger.info("Loading checkpoint %s" % params.checkpoint_path)
             self.restore_checkpoint(params.checkpoint_path)
         elif params.resuming is False and params.pretrained:
-            logger.info(
-                "Starting from pretrained model at %s" % params.pretrained_ckpt_path
-            )
+            logger.info("Starting from pretrained model at %s" % params.pretrained_ckpt_path)
             self.restore_checkpoint(params.pretrained_ckpt_path)
             self.iters = 0
             self.startEpoch = 0
@@ -152,7 +158,7 @@ class Trainer:
         else:
             in_rank = self.global_rank
         if self.log_to_screen:
-            print(f"Initializing data on rank {self.global_rank}")
+            logger.info(f"Initializing data on rank {self.global_rank}")
 
         if self.params.model_type == "fno":
             if params.mode == "train":
@@ -210,8 +216,8 @@ class Trainer:
             elif self.params.mode == "finetune":
                 logger.info("Using Build FNO")
                 self.model = build_fno(params)
-        else:
-            raise NotImplementedError("Only support FNO for now")
+        elif self.params.model_type == "vmae":
+            self.model = build_vmae(params)
 
         if dist.is_initialized():
             self.model = paddle.DataParallel(
@@ -219,7 +225,7 @@ class Trainer:
                 find_unused_parameters=True,
             )
 
-        print(
+        logger.info(
             f"Model parameter count: {sum([p.numel() for p in self.model.parameters()])}"
         )
 
@@ -228,6 +234,14 @@ class Trainer:
         if params.optimizer == "adam":
             self.optimizer = optim.AdamW(
                 parameters=parameters, learning_rate=params.learning_rate
+            )
+        elif params.optimizer == "adan":
+            raise NotImplementedError("Adan not implemented yet")
+        elif params.optimizer == "sgd":
+            self.optimizer = optim.SGD(
+                parameters=self.model.parameters(),
+                learning_rate=params.learning_rate,
+                momentum=0.9,
             )
         else:
             raise ValueError(f"Optimizer {params.optimizer} not supported")
@@ -440,7 +454,7 @@ class Trainer:
                     if self.debug_grad:
                         if self.global_rank == 0:
                             pdiff = param_diff(self.model.parameters(), porig)
-                            print(
+                            logger.info(
                                 "grad_norm",
                                 grad_diff,
                                 "last_step_size",
@@ -538,15 +552,16 @@ class Trainer:
         with paddle.no_grad():
             with amp.auto_cast(enable=False, dtype=self.mp_type):
                 logs = {
-                    "valid_nrmse": paddle.zeros([1]),
-                    "valid_l2": paddle.zeros([1]),
-                }
+                    "valid_nrmse":paddle.zeros([1]),
+                    "valid_l2":paddle.zeros([1]),
+                    }
                 if hasattr(self.valid_dataset, "sub_dsets"):
                     for subset_group in self.valid_dataset.sub_dsets:
                         for subset in subset_group.get_per_file_dsets():
                             logs = self.single_dset_val(subset, logs, cutoff)
                 else:
                     logs = self.single_dset_val(self.valid_dataset, logs, cutoff)
+
 
             if dist.is_initialized():
                 for key in sorted(logs.keys()):
@@ -557,9 +572,7 @@ class Trainer:
         return logs
 
     def train(self):
-        logger.info(
-            f"iters per epoch = {len(self.train_data_loader)}, samples number = {len(self.train_dataset)}, batch size = {self.params.batch_size}, total batches = {len(self.train_data_loader)*self.params.batch_size}"
-        )
+        logger.info(f"iters per epoch = {len(self.train_data_loader)}, samples number = {len(self.train_dataset)}, batch size = {self.params.batch_size}, total batches = {len(self.train_data_loader)*self.params.batch_size}")
         for epoch in range(self.startEpoch, self.params.max_epochs):
             if dist.is_initialized():
                 self.train_sampler.set_epoch(epoch)
@@ -572,19 +585,14 @@ class Trainer:
             gc.collect()
             paddle.device.cuda.empty_cache()
             if epoch % self.params.checkpoint_save_interval == 0:
-                save_dir = self.params.checkpoint_path.replace(
-                    "ckpt", f"ckpt_epoch_{epoch}"
-                )
-                logger.info("saving checkpoint : save_dir")
+                save_dir = self.params.checkpoint_path.replace("ckpt", f"ckpt_epoch_{epoch}")
+                logger.info(f"saving checkpoint : save_dir")
                 self.save_checkpoint(save_dir)
-            logger.info(
-                f"Train loss: {train_logs['train_nrmse']:.2e}, Valid Loss: {valid_logs['valid_nrmse']:.2e}\n"
-            )
+            logger.info(f"Train loss: {train_logs['train_nrmse']:.2e}, Valid Loss: {valid_logs['valid_nrmse']:.2e}\n")
 
-        save_dir = self.params.checkpoint_path.replace("ckpt", "ckpt_last")
+        save_dir = self.params.checkpoint_path.replace("ckpt", f"ckpt_last")
         logger.info(f"saving checkpoint : {save_dir}")
         self.save_checkpoint(save_dir)
-
 
 def train(config: DictConfig):
     params = YParams(config.train_config, config.config, config.mode)
@@ -592,30 +600,29 @@ def train(config: DictConfig):
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
-    if config.use_ddp:
-        dist.init_process_group("nccl")
-
-    device = f"gpu:{local_rank}" if paddle.device.cuda.device_count() >= 1 else "cpu"
-    paddle.set_device(device)
 
     params.batch_size = int(params.batch_size // world_size)
     params.startEpoch = 0
-    exp_dir = os.path.join(params.exp_dir, config.config, str(config.run_name))
+    if config.sweep_id:
+        jid = os.environ["SLURM_JOBID"]
+        expDir = os.path.join(
+            params.exp_dir, config.sweep_id, config.config, str(config.run_name), jid
+        )
+    else:
+        expDir = os.path.join(params.exp_dir, config.config, str(config.run_name))
 
-    params.old_exp_dir = exp_dir
-    params.experiment_dir = os.path.abspath(exp_dir)
-    params.checkpoint_path = os.path.join(exp_dir, "training_checkpoints/ckpt.tar")
-    params.best_checkpoint_path = os.path.join(
-        exp_dir, "training_checkpoints/best_ckpt.tar"
-    )
-    params.old_checkpoint_path = os.path.join(
-        params.old_exp_dir, "training_checkpoints/best_ckpt.tar"
-    )
 
-    if global_rank == 0 and not os.path.isdir(exp_dir):
-        os.makedirs(exp_dir)
-        os.makedirs(os.path.join(exp_dir, "training_checkpoints/"))
-    params.resuming = True if os.path.isfile(params.checkpoint_path) else False
+    if global_rank == 0:
+        if not os.path.isdir(expDir):
+            os.makedirs(expDir)
+            os.makedirs(os.path.join(expDir, "training_checkpoints/"))
+    if params.resuming == True:
+        logger.info(f"check the checkpoint file existence : {params.checkpoint_path}")
+        if os.path.isfile(params.checkpoint_path):
+            pass
+        else:
+            raise FileNotFoundError
+
     params.name = str(config.run_name)
     params.log_to_screen = (global_rank == 0) and params.log_to_screen
 
@@ -624,29 +631,25 @@ def train(config: DictConfig):
         yaml = YAML()
         for key, value in params.params.items():
             hparams[str(key)] = str(value)
-        with open(os.path.join(exp_dir, "hyperparams.yaml"), "w") as hpfile:
+        with open(os.path.join(expDir, "hyperparams.yaml"), "w") as hpfile:
             yaml.dump(hparams, hpfile)
-    trainer = Trainer(params, global_rank, local_rank, device, sweep_id=config.sweep_id)
+    trainer = Trainer(params, global_rank, local_rank, sweep_id=config.sweep_id)
     if config.sweep_id and trainer.global_rank == 0:
-        print(config.sweep_id, trainer.params.entity, trainer.params.project)
+        logger.info(config.sweep_id, trainer.params.entity, trainer.params.project)
     else:
         trainer.train()
-
 
 @paddle.no_grad()
 def inference(config):
     config = config.infer_config
     if config.ckpt_path:
-        save_dir = os.path.join(
-            "/".join(config.ckpt_path.split("/")[:-1]), "results_icl"
-        )
+        save_dir = os.path.join("/".join(config.ckpt_path.split("/")[:-1]), "results_icl")
     else:
         basedir = os.path.join("exp", config["log"]["logdir"])
         save_dir = os.path.join(basedir, "results_icl")
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(
-        save_dir,
-        "fno-prediction-demo%d.pt" % (config.num_demos if config.num_demos else 0),
+        save_dir, "fno-prediction-demo%d.pt" % (config.num_demos if config.num_demos else 0)
     )
 
     params = Namespace(**config)
@@ -711,9 +714,7 @@ def inference(config):
             u = model(inputs)
         else:
             model.target = targets
-            u = model.forward_icl(
-                inputs, input_demos, target_demos, use_tqdm=config.tqdm
-            )
+            u = model.forward_icl(inputs, input_demos, target_demos, use_tqdm=config.tqdm)
 
         data_loss = l2_err(u.detach(), targets.detach())
         losses.append(data_loss.item())
@@ -721,6 +722,8 @@ def inference(config):
             u.detach() / paddle.abs(u).max(),
             targets.detach() / paddle.abs(targets).max(),
         )
+        # logger.info(data_loss.item())
+        # logger.info(data_loss_normalized.item())
         losses_normalized.append(data_loss_normalized.item())
         truth_list.append(targets.cpu())
         pred_list.append(u.cpu())
@@ -729,7 +732,7 @@ def inference(config):
         paddle.concat(pred_list, axis=0).view([-1]).numpy(),
         paddle.concat(truth_list, axis=0).view([-1]).numpy(),
     )
-    print(
+    logger.info(
         "L2:",
         np.mean(losses),
         "L2 (normalized)",
@@ -765,10 +768,19 @@ def main(config: DictConfig):
     elif config.mode == "infer":
         inference(config)
     else:
-        raise ValueError(
-            f"config.mode should in ['train', 'infer'], but got '{config.mode}'"
-        )
+        raise ValueError(f"config.mode should in ['train', 'infer'], but got '{config.mode}'")
 
 
 if __name__ == "__main__":
     main()
+# export PYTHONPATH=/workspace/PaddleScience_repo/data_efficient_nopt/
+# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_helmholtz.yaml
+# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_poisson.yaml config=pois-64-pretrain-e1_20_m0
+# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_poisson.yaml mode=infer
+# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_poisson.yaml config=pois-64-pretrain-e1_20_m0 mode=infer ckpt_path=./exp/pois-64-pretrain-e1_20_m0/r0/training_checkpoints/ckpt.tar
+# data/helmholtz_64/helmholtz_64/helmholtz_64_o1_20_train.h5
+# ls -l data/helmholtz_64/helmholtz_64/helmholtz_64_o1_20_train.h5
+# ls -l data/helmholtz_64/helmholtz_64/helmholtz_64_o15_20_train.h5 
+
+
+# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_poisson.yaml  mode=infer infer_config.ckpt_path=./exp/pois-64-pretrain-e1_20_m0/r0/training_checkpoints/ckpt.tar
