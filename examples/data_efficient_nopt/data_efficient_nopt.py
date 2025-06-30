@@ -605,17 +605,17 @@ def train(config: DictConfig):
     params.startEpoch = 0
     if config.sweep_id:
         jid = os.environ["SLURM_JOBID"]
-        expDir = os.path.join(
+        exp_dir = os.path.join(
             params.exp_dir, config.sweep_id, config.config, str(config.run_name), jid
         )
     else:
-        expDir = os.path.join(params.exp_dir, config.config, str(config.run_name))
+        exp_dir = os.path.join(params.exp_dir, config.config, str(config.run_name))
 
 
     if global_rank == 0:
-        if not os.path.isdir(expDir):
-            os.makedirs(expDir)
-            os.makedirs(os.path.join(expDir, "training_checkpoints/"))
+        if not os.path.isdir(exp_dir):
+            os.makedirs(exp_dir)
+            os.makedirs(os.path.join(exp_dir, "training_checkpoints/"))
     if params.resuming == True:
         logger.info(f"check the checkpoint file existence : {params.checkpoint_path}")
         if os.path.isfile(params.checkpoint_path):
@@ -631,7 +631,7 @@ def train(config: DictConfig):
         yaml = YAML()
         for key, value in params.params.items():
             hparams[str(key)] = str(value)
-        with open(os.path.join(expDir, "hyperparams.yaml"), "w") as hpfile:
+        with open(os.path.join(exp_dir, "hyperparams.yaml"), "w") as hpfile:
             yaml.dump(hparams, hpfile)
     trainer = Trainer(params, global_rank, local_rank, sweep_id=config.sweep_id)
     if config.sweep_id and trainer.global_rank == 0:
