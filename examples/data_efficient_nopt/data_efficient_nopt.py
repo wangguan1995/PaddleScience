@@ -773,14 +773,3 @@ def main(config: DictConfig):
 
 if __name__ == "__main__":
     main()
-# export PYTHONPATH=/workspace/PaddleScience_repo/data_efficient_nopt/
-# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_helmholtz.yaml
-# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_poisson.yaml config=pois-64-pretrain-e1_20_m0
-# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_poisson.yaml mode=infer
-# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_poisson.yaml config=pois-64-pretrain-e1_20_m0 mode=infer ckpt_path=./exp/pois-64-pretrain-e1_20_m0/r0/training_checkpoints/ckpt.tar
-# data/helmholtz_64/helmholtz_64/helmholtz_64_o1_20_train.h5
-# ls -l data/helmholtz_64/helmholtz_64/helmholtz_64_o1_20_train.h5
-# ls -l data/helmholtz_64/helmholtz_64/helmholtz_64_o15_20_train.h5 
-
-
-# python data_efficient_nopt.py --config-name=data_efficient_nopt_fno_poisson.yaml  mode=infer infer_config.ckpt_path=./exp/pois-64-pretrain-e1_20_m0/r0/training_checkpoints/ckpt.tar
