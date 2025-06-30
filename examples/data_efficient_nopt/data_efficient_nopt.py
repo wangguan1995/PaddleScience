@@ -725,8 +725,8 @@ def inference(config):
         # logger.info(data_loss.item())
         # logger.info(data_loss_normalized.item())
         losses_normalized.append(data_loss_normalized.item())
-        truth_list.append(targets.cpu())
-        pred_list.append(u.cpu())
+        truth_list.append(targets)
+        pred_list.append(u)
 
     slope, intercept, r, p, se = linregress(
         paddle.concat(pred_list, axis=0).view([-1]).numpy(),
