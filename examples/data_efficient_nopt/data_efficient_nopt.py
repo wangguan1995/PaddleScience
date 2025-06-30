@@ -37,7 +37,6 @@ from tqdm import tqdm
 
 from ppsci.arch.data_efficient_nopt_model import YParams
 from ppsci.arch.data_efficient_nopt_model import build_fno
-from ppsci.arch.data_efficient_nopt_model import build_vmae
 from ppsci.arch.data_efficient_nopt_model import fno_pretrain as fno
 from ppsci.arch.data_efficient_nopt_model import gaussian_blur
 from ppsci.data.dataset.data_efficient_nopt_dataset import MixedDatasetLoader
@@ -92,12 +91,6 @@ def param_diff(params1, params2):
 
 
 def add_weight_decay(model, weight_decay=1e-5, inner_lr=1e-3, skip_list=()):
-    """From Ross Wightman at:
-    https://discuss.pytorch.org/t/weight-decay-in-the-optimizers-is-a-bad-idea-especially-with-batchnorm/16994/3
-
-    Goes through the parameter list and if the squeeze dim is 1 or 0 (usually means bias or scale)
-    then don't apply weight decay.
-    """
     decay = []
     no_decay = []
     for name, param in model.named_parameters():
