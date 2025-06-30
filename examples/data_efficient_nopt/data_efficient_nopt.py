@@ -15,7 +15,6 @@
 
 import gc
 import os
-import time
 import random
 from argparse import Namespace
 from collections import OrderedDict
@@ -91,7 +90,7 @@ def param_diff(params1, params2):
         return total_norm**0.5
 
 
-def add_weight_decay(model, weight_decay=1e-5, inner_lr=1e-3, skip_list=()):
+def add_weight_decay(model, weight_decay=1e-5, skip_list=()):
     decay = []
     no_decay = []
     for name, param in model.named_parameters():
@@ -117,11 +116,9 @@ class Trainer:
         self.local_rank = local_rank
         self.world_size = int(os.environ.get("WORLD_SIZE", 1))
         self.sweep_id = sweep_id
-        self.log_to_screen = params.log_to_screen
         self.train_loss = nn.MSELoss()
         self.start_epoch = 0
         self.epoch = 0
-        self.debug_grad = params.debug_grad
         self.mp_type = (
             "bfloat16"
             if paddle.device.cuda.device_count() >= 1
@@ -146,13 +143,9 @@ class Trainer:
 
         self.initialize_scheduler(self.params)
 
+
     def initialize_data(self, params):
-        if params.tie_batches:
-            in_rank = 0
-        else:
-            in_rank = self.global_rank
-        if self.log_to_screen:
-            logger.info(f"Initializing data on rank {self.global_rank}")
+        logger.info(f"Initializing data on rank {self.global_rank}")
 
         if self.params.model_type == "fno":
             if params.mode == "train":
@@ -164,6 +157,7 @@ class Trainer:
             ) = PoisHelmDatasetLoader(
                 params, params.train_path, dist.is_initialized(), train=True
             )
+
             (
                 self.valid_data_loader,
                 self.valid_dataset,
@@ -171,37 +165,9 @@ class Trainer:
             ) = PoisHelmDatasetLoader(
                 params, params.val_path, dist.is_initialized(), train=False
             )
-        elif self.params.model_type == "vmae":
-            params.masking = (
-                (
-                    params.n_steps,
-                    params.input_size // params.patch_size,
-                    params.input_size // params.patch_size,
-                ),
-                params.mask_ratio,
-            )
+        else:
+            raise NotImplementedError
 
-            (
-                self.train_data_loader,
-                self.train_dataset,
-                self.train_sampler,
-            ) = MixedDatasetLoader(
-                params,
-                params.train_data_paths,
-                dist.is_initialized(),
-                split="train",
-                rank=in_rank,
-                train_offset=self.params.embedding_offset,
-            )
-            self.valid_data_loader, self.valid_dataset, _ = MixedDatasetLoader(
-                params,
-                params.valid_data_paths,
-                dist.is_initialized(),
-                split="val",
-                rank=in_rank,
-            )
-        if dist.is_initialized():
-            self.train_sampler.set_epoch(0)
 
     def initialize_model(self, params):
         if self.params.model_type == "fno":
@@ -223,6 +189,7 @@ class Trainer:
             f"Model parameter count: {sum([p.numel() for p in self.model.parameters()])}"
         )
 
+
     def initialize_optimizer(self, params):
         parameters = add_weight_decay(self.model, self.params.weight_decay)
         if params.optimizer == "adam":
@@ -234,6 +201,7 @@ class Trainer:
         self.gscaler = amp.GradScaler(
             enable=(self.mp_type == paddle.float16 and params.enable_amp)
         )
+
 
     def initialize_scheduler(self, params):
         if params.scheduler_epochs > 0:
@@ -285,6 +253,7 @@ class Trainer:
         else:
             self.scheduler = None
 
+
     def save_checkpoint(self, checkpoint_path, model=None):
         """Save model and optimizer to checkpoint"""
         if not model:
@@ -299,6 +268,7 @@ class Trainer:
             },
             checkpoint_path,
         )
+
 
     def restore_checkpoint(self, checkpoint_path):
         """Load model/opt from path"""
@@ -321,6 +291,7 @@ class Trainer:
             self.iters = 0
         checkpoint = None
         self.model = self.model
+
 
     def train_one_epoch(self):
         self.model.train()
@@ -353,11 +324,11 @@ class Trainer:
                         inp_blur.append(_inp)
                     inp_blur = paddle.stack(inp_blur, axis=0)
                 else:
-                    inp_blur = inp.detach().clone()
+                    inp_blur = inp.clone()
             else:
                 inp, label = map(lambda x: x, data)
                 mask = None
-                inp_blur = inp.detach().clone()
+                inp_blur = inp.clone()
             if len(inp.shape) == 5:
                 inp = rearrange(inp, "b t c h w -> t b c h w")
                 inp_blur = rearrange(inp_blur, "b t c h w -> t b c h w")
@@ -425,38 +396,16 @@ class Trainer:
                     logs["train_loss"] += loss
                     log_nrmse = raw_loss.sqrt().mean()
                 self.gscaler.scale(loss).backward()
-
-                if self.debug_grad and self.model.require_backward_grad_sync:
-                    with paddle.no_grad():
-                        self.gscaler.unscale_(self.optimizer)
-                        grad_diff = grad_norm(self.model.parameters())
-                        porig = [p.clone() for p in self.model.parameters()]
-
                 if self.model.require_backward_grad_sync:
                     self.gscaler.unscale_(self.optimizer)
                     paddle.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
                     self.gscaler.step(self.optimizer)
                     self.gscaler.update()
-                    if self.debug_grad:
-                        if self.global_rank == 0:
-                            pdiff = param_diff(self.model.parameters(), porig)
-                            logger.info(
-                                "grad_norm",
-                                grad_diff,
-                                "last_step_size",
-                                pdiff,
-                                "loss",
-                                loss.item(),
-                                "data_shape",
-                                label.shape,
-                            )
                     self.optimizer.clear_gradients(set_to_zero=False)
                     if self.scheduler is not None:
                         self.scheduler.step()
                 if (
-                    self.log_to_screen
-                    and batch_idx % self.params.log_interval == 0
-                    and self.global_rank == 0
+                    batch_idx % self.params.log_interval == 0
                 ):
                     logger.info(
                         f"Epoch {self.epoch}/{self.params.max_epochs} Batch {batch_idx+1}/{len(self.train_data_loader)} Train Loss {log_nrmse.item():.2e}"
@@ -464,7 +413,7 @@ class Trainer:
         logs = {k: v / steps for k, v in logs.items()}
         if dist.is_initialized():
             for key in sorted(logs.keys()):
-                dist.all_reduce(logs[key].detach())
+                dist.all_reduce(logs[key])
                 logs[key] = float(logs[key] / dist.get_world_size())
 
         self.iters += steps
@@ -475,21 +424,15 @@ class Trainer:
         logs["train_l2"] = logs["train_l2"].item() / n
         return logs
 
+
     def single_dset_val(self, subset, logs, cutoff=40):
-        if self.params.use_ddp:
-            temp_loader = paddle.io.DataLoader(
-                subset,
-                batch_size=self.params.batch_size,
-                num_workers=self.params.num_data_workers,
-            )
-        else:
-            temp_loader = paddle.io.DataLoader(
-                subset,
-                batch_size=self.params.batch_size,
-                num_workers=self.params.num_data_workers,
-                shuffle=True,
-                drop_last=True,
-            )
+        temp_loader = paddle.io.DataLoader(
+            subset,
+            batch_size=self.params.batch_size,
+            num_workers=self.params.num_data_workers,
+            shuffle=True,
+            drop_last=True,
+        )
         count = 0
         for _, data in enumerate(temp_loader):
             if count > cutoff:
@@ -520,9 +463,14 @@ class Trainer:
             logs["valid_l2"] += l2_err(output, label, spatial_dims).item()
         else:
             del temp_loader
-        logs["valid_nrmse"] = logs["valid_nrmse"].item() / count
-        logs["valid_l2"] = logs["valid_l2"].item() / count
-        return logs
+            if count > 0:
+                logs["valid_nrmse"] = logs["valid_nrmse"].item() / count
+                logs["valid_l2"] = logs["valid_l2"].item() / count
+            else:
+                logs["valid_nrmse"] = paddle.zeros([1])
+                logs["valid_l2"] = paddle.zeros([1])
+            return logs
+
 
     def validate_one_epoch(self, full=False):
         """
@@ -551,11 +499,12 @@ class Trainer:
 
             if dist.is_initialized():
                 for key in sorted(logs.keys()):
-                    dist.all_reduce(logs[key].detach())
+                    dist.all_reduce(logs[key])
                     logs[key] = float(logs[key].item() / dist.get_world_size())
                     if "rmse" in key:
                         logs[key] = logs[key]
         return logs
+
 
     def train(self):
         logger.info(f"iters per epoch = {len(self.train_data_loader)}, samples number = {len(self.train_dataset)}, batch size = {self.params.batch_size}, total batches = {len(self.train_data_loader)*self.params.batch_size}")
@@ -580,9 +529,9 @@ class Trainer:
         logger.info(f"saving checkpoint : {save_dir}")
         self.save_checkpoint(save_dir)
 
+
 def train(config: DictConfig):
     params = YParams(config.train_config, config.config, config.mode)
-    params.use_ddp = config.use_ddp
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
@@ -604,7 +553,6 @@ def train(config: DictConfig):
             raise FileNotFoundError
 
     params.name = str(config.run_name)
-    params.log_to_screen = (global_rank == 0) and params.log_to_screen
 
     if global_rank == 0:
         hparams = ruamelDict()
@@ -614,10 +562,8 @@ def train(config: DictConfig):
         with open(os.path.join(exp_dir, "hyperparams.yaml"), "w") as hpfile:
             yaml.dump(hparams, hpfile)
     trainer = Trainer(params, global_rank, local_rank, sweep_id=config.sweep_id)
-    if config.sweep_id and trainer.global_rank == 0:
-        logger.info(config.sweep_id, trainer.params.entity, trainer.params.project)
-    else:
-        trainer.train()
+    trainer.train()
+
 
 @paddle.no_grad()
 def inference(config):
@@ -639,13 +585,13 @@ def inference(config):
         params.local_valid_batch_size = config["batch_size"]
     else:
         params.local_valid_batch_size = 1
-    dataloader, dataset, sampler = PoisHelmDatasetLoader(
+    dataloader, _, _ = PoisHelmDatasetLoader(
         params, params.test_path, dist.is_initialized(), train=False
     )
     if config.num_demos is not None and config.num_demos != 0:
         params.subsample = 1
         params.local_valid_batch_size = config.num_demos
-        dataloader_icl, dataset_icl, _ = PoisHelmDatasetLoader(
+        dataloader_icl, _, _ = PoisHelmDatasetLoader(
             params, params.train_path, dist.is_initialized(), train=False
         )
         input_demos, target_demos = next(iter(dataloader_icl))
@@ -694,19 +640,19 @@ def inference(config):
             u = model(inputs)
         else:
             model.target = targets
-            u = model.forward_icl(inputs, input_demos, target_demos, use_tqdm=config.tqdm)
+            u = model.forward_icl(inputs, input_demos, target_demos)
 
-        data_loss = l2_err(u.detach(), targets.detach())
+        data_loss = l2_err(u, targets)
         losses.append(data_loss.item())
         data_loss_normalized = l2_err(
-            u.detach() / paddle.abs(u).max(),
-            targets.detach() / paddle.abs(targets).max(),
+            u / paddle.abs(u).max(),
+            targets / paddle.abs(targets).max(),
         )
         losses_normalized.append(data_loss_normalized.item())
         truth_list.append(targets)
         pred_list.append(u)
 
-    slope, intercept, r, p, se = linregress(
+    slope, _, r, _, _ = linregress(
         paddle.concat(pred_list, axis=0).view([-1]).numpy(),
         paddle.concat(truth_list, axis=0).view([-1]).numpy(),
     )
@@ -730,7 +676,7 @@ def inference(config):
             "rmse_normalized": np.mean(losses_normalized),
             "r2": r,
             "slope": slope,
-        },
+        }, # type: ignore
         save_path,
     )
 
@@ -746,7 +692,7 @@ def main(config: DictConfig):
     elif config.mode == "infer":
         inference(config)
     else:
-        raise ValueError(f"config.mode should in ['train', 'infer'], but got '{config.mode}'")
+        raise ValueError(f"config.mode should in ['train', 'finetune', 'infer'], but got '{config.mode}'")
 
 
 if __name__ == "__main__":
